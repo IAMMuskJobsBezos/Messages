@@ -10,14 +10,14 @@
     android:focusable="true"
     android:minHeight="@dimen/two_line_list_item_min_height"
     android:paddingStart="@dimen/activity_margin"
-    android:paddingTop="@dimen/medium_margin"
+    android:paddingTop="@dimen/bigger_margin"
     android:paddingEnd="@dimen/activity_margin"
-    android:paddingBottom="@dimen/medium_margin">
+    android:paddingBottom="@dimen/bigger_margin">
 
     <ImageView
         android:id="@+id/conversation_image"
-        android:layout_width="@dimen/list_icon_size_medium"
-        android:layout_height="@dimen/list_icon_size_medium"
+        android:layout_width="@dimen/list_icon_size_large"
+        android:layout_height="@dimen/list_icon_size_large"
         app:layout_constraintBottom_toBottomOf="@id/conversation_body_short"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="@id/conversation_address"
@@ -34,7 +34,7 @@
         android:textDirection="locale"
         android:textSize="@dimen/list_primary_text_size"
         app:layout_constraintBottom_toTopOf="@id/conversation_body_short"
-        app:layout_constraintEnd_toStartOf="@id/conversation_date"
+        app:layout_constraintEnd_toStartOf="@id/unread_count_badge"
         app:layout_constraintStart_toEndOf="@id/conversation_image"
         app:layout_constraintTop_toTopOf="parent"
         tools:text="John" />
@@ -61,6 +61,7 @@
         android:id="@+id/conversation_body_short"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/smaller_margin"
         android:layout_marginEnd="@dimen/activity_margin"
         android:ellipsize="end"
         android:maxLines="1"
@@ -73,19 +74,6 @@
         app:layout_constraintTop_toBottomOf="@id/conversation_address"
         tools:text="Hey buddy!" />
 
-    <org.fossify.commons.views.MyTextView
-        android:id="@+id/conversation_date"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:alpha="0.7"
-        android:textAlignment="viewStart"
-        android:textDirection="locale"
-        android:textSize="@dimen/list_tertiary_text_size"
-        app:layout_constraintBottom_toBottomOf="@id/conversation_address"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="@id/conversation_address"
-        tools:text="13:30" />
-
     <ImageView
         android:id="@+id/pin_indicator"
         android:layout_width="@dimen/small_icon_size"
@@ -95,9 +83,22 @@
         android:src="@drawable/ic_pin_filled_vector"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="@id/conversation_body_short"
-        app:layout_constraintEnd_toStartOf="@id/unread_count_badge"
+        app:layout_constraintEnd_toStartOf="@id/conversation_date"
         app:layout_constraintTop_toTopOf="@id/conversation_body_short"
         tools:visibility="visible" />
+
+    <org.fossify.commons.views.MyTextView
+        android:id="@+id/conversation_date"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:alpha="0.7"
+        android:textAlignment="viewStart"
+        android:textDirection="locale"
+        android:textSize="@dimen/list_tertiary_text_size"
+        app:layout_constraintBottom_toBottomOf="@id/conversation_body_short"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@id/conversation_body_short"
+        tools:text="13:30" />
 
     <org.fossify.commons.views.MyTextView
         android:id="@+id/unread_count_badge"
@@ -107,9 +108,9 @@
         android:gravity="center"
         android:textSize="@dimen/list_tertiary_text_size"
         android:visibility="gone"
-        app:layout_constraintBottom_toBottomOf="@id/conversation_body_short"
+        app:layout_constraintBottom_toBottomOf="@id/conversation_address"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="@id/conversation_body_short"
+        app:layout_constraintTop_toTopOf="@id/conversation_address"
         tools:text="42"
         tools:visibility="visible" />
 </androidx.constraintlayout.widget.ConstraintLayout>

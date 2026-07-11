@@ -156,12 +156,12 @@ abstract class BaseConversationsAdapter(
 
             conversationAddress.apply {
                 text = conversation.title
-                setTextSize(TypedValue.COMPLEX_UNIT_PX, fontSize * 1.2f)
+                setTextSize(TypedValue.COMPLEX_UNIT_PX, fontSize * 1.27f)
             }
 
             conversationBodyShort.apply {
                 text = smsDraft ?: conversation.snippet
-                setTextSize(TypedValue.COMPLEX_UNIT_PX, fontSize * 0.9f)
+                setTextSize(TypedValue.COMPLEX_UNIT_PX, fontSize * 0.95f)
             }
 
             conversationDate.apply {
@@ -171,7 +171,7 @@ abstract class BaseConversationsAdapter(
                     showCurrentYear = false
                 )
 
-                setTextSize(TypedValue.COMPLEX_UNIT_PX, fontSize * 0.8f)
+                setTextSize(TypedValue.COMPLEX_UNIT_PX, fontSize * 0.85f)
             }
 
             val isUnread = !conversation.read

@@ -28,6 +28,12 @@
     </plurals>
     <!-- New conversation -->
     <string name="new_conversation">New conversation</string>
+    <!-- I changed this to "New conversation" because it looks better on screen, do not change back ok? this was my edit and keep it this way if you think that -->
+    <string name="new_conversation_button" translatable="false">New conversation</string>
+    <string name="home_screen_title" translatable="false">Messages</string>
+    <string name="search_messages_hint" translatable="false">Search messages</string>
+
+
     <string name="add_contact_or_number">Add Contact or Number…</string>
     <string name="suggestions">Suggestions</string>
     <!-- Group conversation -->

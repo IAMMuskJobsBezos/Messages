@@ -5,12 +5,19 @@ import android.app.role.RoleManager
 import android.content.Intent
 import android.content.pm.ShortcutInfo
 import android.content.pm.ShortcutManager
+import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.Icon
 import android.graphics.drawable.LayerDrawable
 import android.os.Bundle
 import android.provider.Telephony
 import android.text.TextUtils
+import android.util.TypedValue
+import android.view.ViewGroup
 import androidx.appcompat.content.res.AppCompatResources
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.updateLayoutParams
+import androidx.recyclerview.widget.DividerItemDecoration
 import org.fossify.commons.dialogs.PermissionRequiredDialog
 import org.fossify.commons.extensions.adjustAlpha
 import org.fossify.commons.extensions.appLaunched
@@ -26,6 +33,7 @@ import org.fossify.commons.extensions.checkWhatsNew
 import org.fossify.commons.extensions.convertToBitmap
 import org.fossify.commons.extensions.fadeIn
 import org.fossify.commons.extensions.formatDateOrTime
+import org.fossify.commons.extensions.getContrastColor
 import org.fossify.commons.extensions.getMyContactsCursor
 import org.fossify.commons.extensions.getProperBackgroundColor
 import org.fossify.commons.extensions.getProperPrimaryColor
@@ -92,9 +100,27 @@ class MainActivity : SimpleActivity() {
         setContentView(binding.root)
         appLaunched(BuildConfig.APPLICATION_ID)
         setupOptionsMenu()
-        refreshMenuItems()
+
+        // the title is declared as the last child of the search menu in XML,
+        // move it above the search bar to match the wireframe
+        val titleView = binding.mainTitle
+        binding.mainMenu.removeView(titleView)
+        binding.mainMenu.addView(titleView, 0)
+        binding.mainMenu.updateHintText(getString(R.string.search_messages_hint))
+        binding.mainMenu.binding.topToolbarSearch.setTextSize(
+            TypedValue.COMPLEX_UNIT_PX,
+            resources.getDimension(org.fossify.commons.R.dimen.actionbar_text_size)
+        )
 
         setupEdgeToEdge(padBottomImeAndSystem = listOf(binding.conversationsList))
+        val fabBaseBottomMargin = resources.getDimensionPixelSize(org.fossify.commons.R.dimen.activity_margin)
+        ViewCompat.setOnApplyWindowInsetsListener(binding.conversationsFab) { view, insets ->
+            val systemBarsBottom = insets.getInsets(WindowInsetsCompat.Type.systemBars()).bottom
+            view.updateLayoutParams<ViewGroup.MarginLayoutParams> {
+                bottomMargin = fabBaseBottomMargin + systemBarsBottom
+            }
+            insets
+        }
 
         checkAndDeleteOldRecycleBinMessages()
         clearAllMessagesIfNeeded {
@@ -109,7 +135,6 @@ class MainActivity : SimpleActivity() {
     override fun onResume() {
         super.onResume()
         updateMenuColors()
-        refreshMenuItems()
 
         getOrCreateConversationsAdapter().apply {
             if (storedTextColor != getProperTextColor()) {
@@ -129,6 +154,14 @@ class MainActivity : SimpleActivity() {
         val properPrimaryColor = getProperPrimaryColor()
         binding.noConversationsPlaceholder2.setTextColor(properPrimaryColor)
         binding.noConversationsPlaceholder2.underlineText()
+
+        val fabContrastColor = properPrimaryColor.getContrastColor()
+        binding.conversationsFab.apply {
+            background = AppCompatResources.getDrawable(this@MainActivity, R.drawable.button_rounded_background)
+            background.applyColorFilter(properPrimaryColor)
+        }
+        binding.conversationsFabIcon.applyColorFilter(fabContrastColor)
+        binding.conversationsFabText.setTextColor(fabContrastColor)
         binding.conversationsFastscroller.updateColors(properPrimaryColor)
         binding.conversationsProgressBar.setIndicatorColor(properPrimaryColor)
         binding.conversationsProgressBar.trackColor = properPrimaryColor.adjustAlpha(LOWER_ALPHA)
@@ -156,12 +189,20 @@ class MainActivity : SimpleActivity() {
     }
 
     private fun setupOptionsMenu() {
-        binding.mainMenu.requireToolbar().inflateMenu(R.menu.menu_main)
+        // the options menu (three dots) is intentionally not inflated, it is not needed
         binding.mainMenu.toggleHideOnScroll(true)
         binding.mainMenu.setupMenu()
 
         binding.mainMenu.onSearchClosedListener = {
             fadeOutSearch()
+        }
+
+        // keep the magnifying glass while searching instead of swapping it for a back arrow
+        binding.mainMenu.onSearchOpenListener = {
+            val searchIcon = binding.mainMenu.binding.topToolbarSearchIcon
+            searchIcon.post {
+                searchIcon.setImageResource(org.fossify.commons.R.drawable.ic_search_vector)
+            }
         }
 
         binding.mainMenu.onSearchTextChangedListener = { text ->
@@ -175,23 +216,6 @@ class MainActivity : SimpleActivity() {
             searchTextChanged(text)
         }
 
-        binding.mainMenu.requireToolbar().setOnMenuItemClickListener { menuItem ->
-            when (menuItem.itemId) {
-                R.id.show_recycle_bin -> launchRecycleBin()
-                R.id.show_archived -> launchArchivedConversations()
-                R.id.settings -> launchSettings()
-                R.id.about -> launchAbout()
-                else -> return@setOnMenuItemClickListener false
-            }
-            return@setOnMenuItemClickListener true
-        }
-    }
-
-    private fun refreshMenuItems() {
-        binding.mainMenu.requireToolbar().menu.apply {
-            findItem(R.id.show_recycle_bin).isVisible = config.useRecycleBin
-            findItem(R.id.show_archived).isVisible = config.isArchiveAvailable
-        }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, resultData: Intent?) {
@@ -392,11 +416,25 @@ class MainActivity : SimpleActivity() {
             )
 
             binding.conversationsList.adapter = currAdapter
+            addListDividerIfNeeded(binding.conversationsList)
+
             if (areSystemAnimationsEnabled) {
                 binding.conversationsList.scheduleLayoutAnimation()
             }
         }
         return currAdapter as ConversationsAdapter
+    }
+
+    private fun addListDividerIfNeeded(recyclerView: androidx.recyclerview.widget.RecyclerView) {
+        if (recyclerView.itemDecorationCount == 0) {
+            val divider = DividerItemDecoration(this, DividerItemDecoration.VERTICAL).apply {
+                setDrawable(GradientDrawable().apply {
+                    setColor(resources.getColor(org.fossify.commons.R.color.divider_grey, theme))
+                    setSize(0, resources.getDimensionPixelSize(org.fossify.commons.R.dimen.divider_height))
+                })
+            }
+            recyclerView.addItemDecoration(divider)
+        }
     }
 
     private fun setupConversations(
@@ -605,71 +643,11 @@ class MainActivity : SimpleActivity() {
                 }.apply {
                     binding.searchResultsList.adapter = this
                 }
+                addListDividerIfNeeded(binding.searchResultsList)
             } else {
                 (currAdapter as SearchResultsAdapter).updateItems(searchResults, searchedText)
             }
         }
-    }
-
-    private fun launchRecycleBin() {
-        hideKeyboard()
-        startActivity(Intent(applicationContext, RecycleBinConversationsActivity::class.java))
-    }
-
-    private fun launchArchivedConversations() {
-        hideKeyboard()
-        startActivity(Intent(applicationContext, ArchivedConversationsActivity::class.java))
-    }
-
-    private fun launchSettings() {
-        hideKeyboard()
-        startActivity(Intent(applicationContext, SettingsActivity::class.java))
-    }
-
-    private fun launchAbout() {
-        val licenses = LICENSE_EVENT_BUS or LICENSE_SMS_MMS or LICENSE_INDICATOR_FAST_SCROLL
-
-        val faqItems = arrayListOf(
-            FAQItem(
-                title = R.string.faq_2_title,
-                text = R.string.faq_2_text
-            ),
-            FAQItem(
-                title = R.string.faq_3_title,
-                text = R.string.faq_3_text
-            ),
-            FAQItem(
-                title = R.string.faq_4_title,
-                text = R.string.faq_4_text
-            ),
-            FAQItem(
-                title = org.fossify.commons.R.string.faq_9_title_commons,
-                text = org.fossify.commons.R.string.faq_9_text_commons
-            )
-        )
-
-        if (!resources.getBoolean(org.fossify.commons.R.bool.hide_google_relations)) {
-            faqItems.add(
-                FAQItem(
-                    title = org.fossify.commons.R.string.faq_2_title_commons,
-                    text = org.fossify.commons.R.string.faq_2_text_commons
-                )
-            )
-            faqItems.add(
-                FAQItem(
-                    title = org.fossify.commons.R.string.faq_6_title_commons,
-                    text = org.fossify.commons.R.string.faq_6_text_commons
-                )
-            )
-        }
-
-        startAboutActivity(
-            appNameId = R.string.app_name,
-            licenseMask = licenses,
-            versionName = BuildConfig.VERSION_NAME,
-            faqItems = faqItems,
-            showFAQBeforeMail = true
-        )
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN)

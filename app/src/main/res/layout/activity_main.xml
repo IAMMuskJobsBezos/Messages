@@ -9,7 +9,23 @@
     <org.fossify.commons.views.MySearchMenu
         android:id="@+id/main_menu"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content" />
+        android:layout_height="wrap_content">
+
+        <!-- moved to the top of the search menu at runtime, see onCreate.
+             Pinned (no scroll flags) and sized like a toolbar so it lines up
+             with the thread screen's header -->
+        <org.fossify.commons.views.MyTextView
+            android:id="@+id/main_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:minHeight="?attr/actionBarSize"
+            android:paddingStart="@dimen/activity_margin"
+            android:paddingEnd="@dimen/activity_margin"
+            android:text="@string/home_screen_title"
+            android:textSize="@dimen/extra_big_text_size" />
+
+    </org.fossify.commons.views.MySearchMenu>
 
     <RelativeLayout
         android:id="@+id/main_nested_scrollview"
@@ -136,13 +152,37 @@
         </RelativeLayout>
     </RelativeLayout>
 
-    <org.fossify.commons.views.MyFloatingActionButton
+    <LinearLayout
         android:id="@+id/conversations_fab"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="bottom|end"
+        android:layout_gravity="bottom"
         android:layout_margin="@dimen/activity_margin"
-        android:src="@drawable/ic_plus_vector"
-        app:applyWindowInsets="true" />
+        android:background="@drawable/button_rounded_background"
+        android:clickable="true"
+        android:focusable="true"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:paddingHorizontal="@dimen/activity_margin"
+        android:paddingVertical="@dimen/normal_margin">
+
+        <ImageView
+            android:id="@+id/conversations_fab_icon"
+            android:layout_width="@dimen/new_conversation_icon_size"
+            android:layout_height="@dimen/new_conversation_icon_size"
+            android:layout_marginEnd="@dimen/medium_margin"
+            android:contentDescription="@string/new_conversation"
+            android:src="@drawable/ic_plus_vector"
+            tools:tint="#FFFFFF" />
+
+        <org.fossify.commons.views.MyTextView
+            android:id="@+id/conversations_fab_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/new_conversation_button"
+            android:textSize="@dimen/extra_big_text_size"
+            tools:textColor="#FFFFFF" />
+
+    </LinearLayout>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

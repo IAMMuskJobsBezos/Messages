@@ -1,11 +1,17 @@
 package org.fossify.messages.adapters
 
+import android.graphics.Typeface
+import android.text.SpannableString
+import android.text.Spanned
+import android.text.style.ForegroundColorSpan
+import android.text.style.StyleSpan
 import android.util.TypedValue
 import android.view.Menu
 import android.view.View
 import android.view.ViewGroup
 import com.bumptech.glide.Glide
 import org.fossify.commons.adapters.MyRecyclerViewAdapter
+import org.fossify.commons.extensions.darkenColor
 import org.fossify.commons.extensions.getTextSize
 import org.fossify.commons.extensions.highlightTextPart
 import org.fossify.commons.helpers.SimpleContactsHelper
@@ -67,26 +73,35 @@ class SearchResultsAdapter(
 
     private fun setupView(view: View, searchResult: SearchResult) {
         ItemSearchResultBinding.bind(view).apply {
+            val highlightColor = properPrimaryColor.darkenColor(60)
             searchResultTitle.apply {
-                text = searchResult.title.highlightTextPart(textToHighlight, properPrimaryColor)
+                text = searchResult.title.highlightTextPart(textToHighlight, highlightColor).withBoldHighlights()
                 setTextColor(textColor)
-                setTextSize(TypedValue.COMPLEX_UNIT_PX, fontSize * 1.2f)
+                setTextSize(TypedValue.COMPLEX_UNIT_PX, fontSize * 1.27f)
             }
 
             searchResultSnippet.apply {
-                text = searchResult.snippet.highlightTextPart(textToHighlight, properPrimaryColor)
+                text = searchResult.snippet.highlightTextPart(textToHighlight, highlightColor).withBoldHighlights()
                 setTextColor(textColor)
-                setTextSize(TypedValue.COMPLEX_UNIT_PX, fontSize * 0.9f)
+                setTextSize(TypedValue.COMPLEX_UNIT_PX, fontSize * 0.95f)
             }
 
             searchResultDate.apply {
                 text = searchResult.date
                 setTextColor(textColor)
-                setTextSize(TypedValue.COMPLEX_UNIT_PX, fontSize * 0.8f)
+                setTextSize(TypedValue.COMPLEX_UNIT_PX, fontSize * 0.85f)
             }
 
             SimpleContactsHelper(activity).loadContactImage(searchResult.photoUri, searchResultImage, searchResult.title)
         }
+    }
+
+    // highlightTextPart only colors the matched text, make it bold too
+    private fun SpannableString.withBoldHighlights(): SpannableString {
+        getSpans(0, length, ForegroundColorSpan::class.java).forEach {
+            setSpan(StyleSpan(Typeface.BOLD), getSpanStart(it), getSpanEnd(it), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+        return this
     }
 
     override fun onViewRecycled(holder: ViewHolder) {
