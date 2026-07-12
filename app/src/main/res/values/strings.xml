@@ -38,6 +38,8 @@
     <string name="add_contact_or_number">Add Contact or Number…</string>
     <string name="create_conversation_button" translatable="false">Create!</string>
     <string name="to_label" translatable="false">To:</string>
+    <string name="send_a_message" translatable="false">Send a message…</string>
+    <string name="send_button" translatable="false">SEND</string>
     <string name="view_contact" translatable="false">View contact</string>
     <string name="edit_contact" translatable="false">Edit contact</string>
     <string name="add_to_contacts" translatable="false">Add to contacts</string>

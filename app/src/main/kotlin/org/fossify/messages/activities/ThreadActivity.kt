@@ -58,6 +58,7 @@ import org.fossify.commons.dialogs.PermissionRequiredDialog
 import org.fossify.commons.dialogs.RadioGroupDialog
 import org.fossify.commons.extensions.addBlockedNumber
 import org.fossify.commons.extensions.addLockedLabelIfNeeded
+import org.fossify.commons.extensions.adjustAlpha
 import org.fossify.commons.extensions.applyColorFilter
 import org.fossify.commons.extensions.beGone
 import org.fossify.commons.extensions.beVisible
@@ -899,15 +900,26 @@ class ThreadActivity : SimpleActivity() {
         val textColor = getProperTextColor()
 
         binding.messageHolder.apply {
-            threadSendMessage.setTextColor(textColor)
-            threadSendMessage.compoundDrawables.forEach {
-                it?.applyColorFilter(textColor)
-            }
+            val properPrimaryColor = getProperPrimaryColor()
+
+            // SEND button and the message field share the chips' rectangle style
+            threadSendMessage.background = AppCompatResources.getDrawable(
+                this@ThreadActivity, R.drawable.chip_rectangle_background
+            )
+            threadSendMessage.background.applyColorFilter(properPrimaryColor)
+            threadSendMessage.setTextColor(properPrimaryColor.getContrastColor())
+
+            threadTypeMessage.background = AppCompatResources.getDrawable(
+                this@ThreadActivity, R.drawable.chip_rectangle_background
+            )
+            threadTypeMessage.background.applyColorFilter(properPrimaryColor.adjustAlpha(0.25f))
+
+            // the top line blends into the bar's own light grey background
+            sendBarTopDivider.setBackgroundColor(getBottomBarColor())
 
             confirmManageContacts.applyColorFilter(textColor)
             threadAddAttachment.applyColorFilter(textColor)
 
-            val properPrimaryColor = getProperPrimaryColor()
             threadMessagesFastscroller.updateColors(properPrimaryColor)
 
             threadCharacterCounter.beVisibleIf(config.showCharacterCounter)
@@ -1614,11 +1626,12 @@ class ThreadActivity : SimpleActivity() {
             if (threadTypeMessage.text!!.isNotEmpty() || (getAttachmentSelections().isNotEmpty() && !getAttachmentSelections().any { it.isPending })) {
                 threadSendMessage.isEnabled = true
                 threadSendMessage.isClickable = true
-                threadSendMessage.alpha = 0.9f
+                threadSendMessage.alpha = 1f
             } else {
                 threadSendMessage.isEnabled = false
                 threadSendMessage.isClickable = false
-                threadSendMessage.alpha = 0.4f
+                // keep the disabled state clearly readable for old eyes
+                threadSendMessage.alpha = 0.8f
             }
         }
 
@@ -1919,13 +1932,8 @@ class ThreadActivity : SimpleActivity() {
     }
 
     private fun updateMessageType() {
-        val text = binding.messageHolder.threadTypeMessage.text.toString()
-        val stringId = if (isMmsMessage(text)) {
-            R.string.mms
-        } else {
-            R.string.sms
-        }
-        binding.messageHolder.threadSendMessage.setText(stringId)
+        // the button always reads SEND, the SMS/MMS distinction only confuses here
+        binding.messageHolder.threadSendMessage.setText(R.string.send_button)
     }
 
     private fun showScheduledMessageInfo(message: Message) {

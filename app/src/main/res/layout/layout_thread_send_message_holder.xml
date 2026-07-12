@@ -97,25 +97,40 @@
         android:contentDescription="@string/attachment"
         android:padding="@dimen/normal_margin"
         android:src="@drawable/ic_plus_vector"
+        android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="@+id/thread_type_message"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="@+id/thread_type_message" />
+
+    <ImageView
+        android:id="@+id/send_bar_top_divider"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/divider_height"
+        android:layout_marginBottom="@dimen/medium_margin"
+        android:background="@color/divider_grey"
+        android:importantForAccessibility="no"
+        app:layout_constraintBottom_toTopOf="@+id/thread_type_message" />
 
     <org.fossify.commons.views.MyEditText
         android:id="@+id/thread_type_message"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="@dimen/small_margin"
-        android:layout_marginEnd="@dimen/small_margin"
-        android:background="@android:color/transparent"
+        android:layout_marginTop="@dimen/medium_margin"
+        android:layout_marginEnd="@dimen/medium_margin"
+        android:layout_marginBottom="@dimen/medium_margin"
+        android:background="@drawable/chip_rectangle_background"
         android:gravity="center_vertical"
-        android:hint="@string/type_a_message"
+        android:hint="@string/send_a_message"
         android:inputType="textCapSentences|textMultiLine"
         android:minHeight="@dimen/normal_icon_size"
         android:maxLines="8"
+        android:paddingHorizontal="@dimen/activity_margin"
+        android:paddingVertical="@dimen/normal_margin"
         app:layout_constraintBottom_toTopOf="@+id/attachment_picker_divider"
         app:layout_constraintEnd_toStartOf="@id/thread_select_sim_icon"
-        app:layout_constraintStart_toEndOf="@+id/thread_add_attachment" />
+        app:layout_constraintStart_toEndOf="@+id/thread_add_attachment"
+        app:layout_goneMarginStart="@dimen/normal_margin" />
 
     <ImageView
         android:id="@+id/thread_select_sim_icon"
@@ -167,20 +182,21 @@
 
     <org.fossify.commons.views.MyButton
         android:id="@+id/thread_send_message"
-        android:layout_width="@dimen/normal_icon_size"
-        android:layout_height="@dimen/normal_icon_size"
-        android:layout_marginEnd="@dimen/small_margin"
-        android:alpha="0.4"
-        android:background="?selectableItemBackgroundBorderless"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="@dimen/normal_margin"
+        android:alpha="0.8"
+        android:background="@drawable/chip_rectangle_background"
         android:clickable="false"
         android:contentDescription="@string/ok"
-        android:drawableTop="@drawable/ic_send_vector"
-        android:paddingVertical="@dimen/small_margin"
-        android:text="@string/sms"
-        android:textSize="@dimen/smaller_text_size"
+        android:minWidth="0dp"
+        android:minHeight="0dp"
+        android:paddingHorizontal="@dimen/activity_margin"
+        android:paddingVertical="@dimen/normal_margin"
+        android:text="@string/send_button"
+        android:textSize="@dimen/big_text_size"
         app:layout_constraintBottom_toBottomOf="@+id/thread_type_message"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/thread_type_message" />
+        app:layout_constraintEnd_toEndOf="parent" />
 
     <View
         android:id="@+id/attachment_picker_divider"
