@@ -19,6 +19,7 @@
     <string name="unpin_conversation">Unpin</string>
     <string name="forward_message">Forward</string>
     <string name="compress_error">Unable to compress image to selected size</string>
+
     <!-- Attachments -->
     <string name="duplicate_item_warning">Duplicate item was not included</string>
     <!-- vCard -->
@@ -35,6 +36,11 @@
 
 
     <string name="add_contact_or_number">Add Contact or Number…</string>
+    <string name="create_conversation_button" translatable="false">Create!</string>
+    <string name="to_label" translatable="false">To:</string>
+    <string name="view_contact" translatable="false">View contact</string>
+    <string name="edit_contact" translatable="false">Edit contact</string>
+    <string name="add_to_contacts" translatable="false">Add to contacts</string>
     <string name="suggestions">Suggestions</string>
     <!-- Group conversation -->
     <string name="members">Members</string>

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/dropdown_option_holder"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginStart="@dimen/dropdown_option_margin"
+    android:layout_marginTop="@dimen/medium_margin"
+    android:layout_marginEnd="@dimen/dropdown_option_margin"
+    android:background="@drawable/button_rounded_background"
+    android:clickable="true"
+    android:focusable="true"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingHorizontal="@dimen/activity_margin"
+    android:paddingVertical="@dimen/normal_margin">
+
+    <ImageView
+        android:id="@+id/dropdown_option_icon"
+        android:layout_width="@dimen/new_conversation_icon_size"
+        android:layout_height="@dimen/new_conversation_icon_size"
+        android:importantForAccessibility="no"
+        tools:src="@drawable/ic_phone_vector" />
+
+    <TextView
+        android:id="@+id/dropdown_option_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/activity_margin"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:textSize="@dimen/big_text_size"
+        tools:text="Call" />
+
+</LinearLayout>

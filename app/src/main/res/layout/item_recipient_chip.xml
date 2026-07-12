@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/recipient_chip_holder"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:background="@drawable/chip_rectangle_background"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingStart="@dimen/medium_margin"
+    android:paddingTop="@dimen/small_margin"
+    android:paddingEnd="@dimen/small_margin"
+    android:paddingBottom="@dimen/small_margin">
+
+    <TextView
+        android:id="@+id/recipient_chip_name"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@color/md_grey_white"
+        android:textSize="@dimen/big_text_size"
+        tools:text="John" />
+
+    <ImageView
+        android:id="@+id/recipient_chip_remove"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/small_margin"
+        android:contentDescription="@string/remove"
+        android:padding="@dimen/small_margin"
+        android:src="@drawable/ic_cross_vector" />
+
+</LinearLayout>

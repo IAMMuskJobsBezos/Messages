@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.AlarmManager
 import android.content.ActivityNotFoundException
+import android.content.ContentUris
 import android.content.Intent
 import android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
 import android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION
@@ -20,6 +21,7 @@ import android.provider.Telephony.Sms.STATUS_NONE
 import android.telephony.SmsManager
 import android.telephony.SmsMessage
 import android.telephony.SubscriptionInfo
+import android.text.TextPaint
 import android.text.TextUtils
 import android.text.format.DateUtils
 import android.text.format.DateUtils.FORMAT_NO_YEAR
@@ -79,6 +81,7 @@ import org.fossify.commons.extensions.isDynamicTheme
 import org.fossify.commons.extensions.isOrWasThankYouInstalled
 import org.fossify.commons.extensions.isVisible
 import org.fossify.commons.extensions.launchActivityIntent
+import org.fossify.commons.extensions.launchViewContactIntent
 import org.fossify.commons.extensions.maybeShowNumberPickerDialog
 import org.fossify.commons.extensions.normalizeString
 import org.fossify.commons.extensions.notificationManager
@@ -111,6 +114,7 @@ import org.fossify.messages.adapters.AutoCompleteTextViewAdapter
 import org.fossify.messages.adapters.ThreadAdapter
 import org.fossify.messages.databinding.ActivityThreadBinding
 import org.fossify.messages.databinding.ItemSelectedContactBinding
+import org.fossify.messages.databinding.ItemThreadDropdownOptionBinding
 import org.fossify.messages.dialogs.InvalidNumberDialog
 import org.fossify.messages.dialogs.RenameConversationDialog
 import org.fossify.messages.dialogs.ScheduleMessageDialog
@@ -278,7 +282,7 @@ class ThreadActivity : SimpleActivity() {
         super.onResume()
         setupTopAppBar(
             topAppBar = binding.threadAppbar,
-            navigationIcon = NavigationIcon.Arrow,
+            navigationIcon = NavigationIcon.None,
             topBarColor = getProperBackgroundColor()
         )
 
@@ -350,32 +354,9 @@ class ThreadActivity : SimpleActivity() {
     }
 
     private fun refreshMenuItems() {
-        val firstPhoneNumber = participants.firstOrNull()?.phoneNumbers?.firstOrNull()?.value
-        val archiveAvailable = config.isArchiveAvailable
-        binding.threadToolbar.menu.apply {
-            findItem(R.id.delete).isVisible = threadItems.isNotEmpty()
-            findItem(R.id.restore).isVisible = threadItems.isNotEmpty() && isRecycleBin
-            findItem(R.id.archive).isVisible =
-                threadItems.isNotEmpty() && conversation?.isArchived == false && !isRecycleBin && archiveAvailable
-            findItem(R.id.unarchive).isVisible =
-                threadItems.isNotEmpty() && conversation?.isArchived == true && !isRecycleBin && archiveAvailable
-            findItem(R.id.rename_conversation).isVisible =
-                participants.size > 1 && conversation != null && !isRecycleBin
-            findItem(R.id.conversation_details).isVisible = conversation != null && !isRecycleBin
-            findItem(R.id.block_number).title =
-                addLockedLabelIfNeeded(org.fossify.commons.R.string.block_number)
-            findItem(R.id.block_number).isVisible = !isRecycleBin
-            findItem(R.id.dial_number).isVisible =
-                participants.size == 1 && !isSpecialNumber() && !isRecycleBin
-            findItem(R.id.manage_people).isVisible = !isSpecialNumber() && !isRecycleBin
-            findItem(R.id.mark_as_unread).isVisible = threadItems.isNotEmpty() && !isRecycleBin
-
-            // allow saving number in cases when we don't have it stored yet
-            findItem(R.id.add_number_to_contact).isVisible =
-                participants.size == 1 && participants.first().name == firstPhoneNumber && !isRecycleBin
-            findItem(R.id.copy_number).isVisible =
-                participants.size == 1 && !firstPhoneNumber.isNullOrEmpty() && !isRecycleBin
-        }
+        // the header intentionally shows only the title and the three dots button,
+        // everything else lives in the pill dropdown (see showHeaderDropdown)
+        binding.threadToolbar.menu.findItem(R.id.more_options).isVisible = !isRecycleBin
     }
 
     private fun setupOptionsMenu() {
@@ -387,22 +368,113 @@ class ThreadActivity : SimpleActivity() {
 
     private fun handleMenuItemAction(menuItem: MenuItem): Boolean {
         when (menuItem.itemId) {
-            R.id.block_number -> tryBlocking()
-            R.id.delete -> askConfirmDelete()
-            R.id.restore -> askConfirmRestoreAll()
-            R.id.archive -> archiveConversation()
-            R.id.unarchive -> unarchiveConversation()
-            R.id.rename_conversation -> renameConversation()
-            R.id.conversation_details -> launchConversationDetails(threadId)
-            R.id.add_number_to_contact -> addNumberToContact()
-            R.id.copy_number -> copyNumberToClipboard()
-            R.id.dial_number -> dialNumber()
-            R.id.manage_people -> managePeople()
-            R.id.mark_as_unread -> markAsUnread()
+            R.id.more_options -> toggleHeaderDropdown()
             else -> return false
         }
 
         return true
+    }
+
+    private fun toggleHeaderDropdown() {
+        if (binding.threadHeaderDropdown.isVisible()) {
+            hideHeaderDropdown()
+        } else {
+            showHeaderDropdown()
+        }
+    }
+
+    private fun hideHeaderDropdown() {
+        binding.threadHeaderDropdown.beGone()
+        binding.threadHeaderDropdown.removeAllViews()
+    }
+
+    private fun showHeaderDropdown() {
+        binding.threadHeaderDropdown.removeAllViews()
+        if (participants.isEmpty()) {
+            return
+        }
+
+
+        if (participants.size == 1) {
+            val participant = participants.first()
+            val isSavedContact = participant.name != participant.phoneNumbers.first().value &&
+                participant.name != participant.phoneNumbers.first().normalizedNumber
+            addDropdownOption(org.fossify.commons.R.drawable.ic_phone_vector, getString(org.fossify.commons.R.string.call)) {
+                dialNumber()
+            }
+            if (isSavedContact) {
+                addDropdownOption(org.fossify.commons.R.drawable.ic_person_vector, getString(R.string.view_contact)) {
+                    viewContact()
+                }
+                addDropdownOption(org.fossify.commons.R.drawable.ic_edit_vector, getString(R.string.edit_contact)) {
+                    editContact()
+                }
+            } else {
+                addDropdownOption(org.fossify.commons.R.drawable.ic_add_person_vector, getString(R.string.add_to_contacts)) {
+                    addNumberToContact(participant.phoneNumbers.first().normalizedNumber)
+                }
+            }
+        } else {
+            // group conversations pick the person in a second step, like the wireframe
+            addDropdownOption(org.fossify.commons.R.drawable.ic_phone_vector, getString(org.fossify.commons.R.string.call)) {
+                showNumberChoices(org.fossify.commons.R.drawable.ic_phone_vector) { number ->
+                    dialNumber(number)
+                }
+            }
+            addDropdownOption(org.fossify.commons.R.drawable.ic_add_person_vector, getString(R.string.add_to_contacts)) {
+                showNumberChoices(org.fossify.commons.R.drawable.ic_add_person_vector) { number ->
+                    addNumberToContact(number)
+                }
+            }
+        }
+        binding.threadHeaderDropdown.beVisible()
+    }
+
+    private fun showNumberChoices(iconId: Int, onPick: (String) -> Unit) {
+        binding.threadHeaderDropdown.removeAllViews()
+        participants.forEach { participant ->
+            val number = participant.phoneNumbers.first().normalizedNumber
+            addDropdownOption(iconId, participant.name, hideOnClick = true) {
+                onPick(number)
+            }
+        }
+        binding.threadHeaderDropdown.beVisible()
+    }
+
+    private fun addDropdownOption(iconId: Int, label: String, hideOnClick: Boolean = true, onClick: () -> Unit) {
+        val properPrimaryColor = getProperPrimaryColor()
+        val contrastColor = properPrimaryColor.getContrastColor()
+        ItemThreadDropdownOptionBinding.inflate(layoutInflater, binding.threadHeaderDropdown, false).apply {
+            root.background.applyColorFilter(properPrimaryColor)
+            dropdownOptionIcon.setImageDrawable(
+                AppCompatResources.getDrawable(this@ThreadActivity, iconId)
+            )
+            dropdownOptionIcon.applyColorFilter(contrastColor)
+            dropdownOptionLabel.text = label
+            dropdownOptionLabel.setTextColor(contrastColor)
+            root.setOnClickListener {
+                if (hideOnClick) {
+                    hideHeaderDropdown()
+                }
+                onClick()
+            }
+            binding.threadHeaderDropdown.addView(root)
+        }
+    }
+
+    private fun viewContact() {
+        val contactId = participants.firstOrNull()?.contactId ?: return
+        val uri = ContentUris.withAppendedId(ContactsContract.Contacts.CONTENT_URI, contactId.toLong())
+        launchViewContactIntent(uri)
+    }
+
+    private fun editContact() {
+        val contactId = participants.firstOrNull()?.contactId ?: return
+        val uri = ContentUris.withAppendedId(ContactsContract.Contacts.CONTENT_URI, contactId.toLong())
+        Intent(Intent.ACTION_EDIT).apply {
+            data = uri
+            launchActivityIntent(this)
+        }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, resultData: Intent?) {
@@ -1005,12 +1077,41 @@ class ThreadActivity : SimpleActivity() {
     }
 
     private fun setupThreadTitle() {
-        val title = conversation?.title
-        binding.threadToolbar.title = if (!title.isNullOrEmpty()) {
-            title
+        // stored group titles contain every participant, so only a title the user
+        // typed themselves may override the compact "first name, +N more" form
+        val customTitle = conversation?.takeIf { it.usesCustomTitle }?.title
+        binding.threadToolbar.title = if (!customTitle.isNullOrEmpty()) {
+            customTitle
+        } else if (participants.isNotEmpty()) {
+            buildCompactThreadTitle()
         } else {
-            participants.getThreadTitle()
+            conversation?.title ?: binding.threadToolbar.title
         }
+    }
+
+    // fit as many participants as the toolbar can fully show, then "+N more"
+    private fun buildCompactThreadTitle(): String {
+        val names = participants.map { it.name }
+        if (names.size <= 1) {
+            return participants.getThreadTitle()
+        }
+
+        val paint = TextPaint().apply {
+            textSize = resources.getDimension(org.fossify.commons.R.dimen.actionbar_text_size)
+        }
+        // toolbar width minus start inset and the three dots button
+        val availableWidth = resources.displayMetrics.widthPixels -
+                resources.getDimensionPixelSize(org.fossify.commons.R.dimen.normal_icon_size) * 2
+
+        for (count in names.size downTo 1) {
+            val remaining = names.size - count
+            val candidate = names.take(count).joinToString(", ") +
+                    if (remaining > 0) ", +$remaining more" else ""
+            if (paint.measureText(candidate) <= availableWidth || count == 1) {
+                return candidate
+            }
+        }
+        return names.first()
     }
 
     @SuppressLint("MissingPermission")
@@ -1247,9 +1348,10 @@ class ThreadActivity : SimpleActivity() {
         }
     }
 
-    private fun addNumberToContact() {
-        val phoneNumber =
-            participants.firstOrNull()?.phoneNumbers?.firstOrNull()?.normalizedNumber ?: return
+    private fun addNumberToContact(number: String? = null) {
+        val phoneNumber = number
+            ?: participants.firstOrNull()?.phoneNumbers?.firstOrNull()?.normalizedNumber
+            ?: return
         Intent().apply {
             action = Intent.ACTION_INSERT_OR_EDIT
             type = "vnd.android.cursor.item/contact"

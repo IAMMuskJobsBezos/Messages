@@ -166,5 +166,17 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent" />
 
+        <!-- pill options revealed by the three dots button, see showHeaderDropdown.
+             Overlays the messages instead of pushing them down -->
+        <LinearLayout
+            android:id="@+id/thread_header_dropdown"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:elevation="8dp"
+            android:orientation="vertical"
+            android:paddingBottom="@dimen/medium_margin"
+            android:visibility="gone"
+            app:layout_constraintTop_toTopOf="parent" />
+
     </androidx.constraintlayout.widget.ConstraintLayout>
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

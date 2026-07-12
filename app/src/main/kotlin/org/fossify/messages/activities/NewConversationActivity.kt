@@ -3,10 +3,15 @@ package org.fossify.messages.activities
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.util.TypedValue
 import android.view.WindowManager
+import android.view.inputmethod.EditorInfo
 import android.widget.Toast
+import androidx.appcompat.content.res.AppCompatResources
 import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import com.reddit.indicatorfastscroll.FastScrollItemIndicator
+import org.fossify.commons.extensions.adjustAlpha
 import org.fossify.commons.extensions.applyColorFilter
 import org.fossify.commons.extensions.areSystemAnimationsEnabled
 import org.fossify.commons.extensions.beGone
@@ -17,8 +22,10 @@ import org.fossify.commons.extensions.getContrastColor
 import org.fossify.commons.extensions.getMyContactsCursor
 import org.fossify.commons.extensions.getProperPrimaryColor
 import org.fossify.commons.extensions.getProperTextColor
+import org.fossify.commons.extensions.getTextSize
 import org.fossify.commons.extensions.hasPermission
 import org.fossify.commons.extensions.hideKeyboard
+import org.fossify.commons.extensions.isVisible
 import org.fossify.commons.extensions.maybeShowNumberPickerDialog
 import org.fossify.commons.extensions.normalizeString
 import org.fossify.commons.extensions.onTextChangeListener
@@ -36,8 +43,8 @@ import org.fossify.commons.models.SimpleContact
 import org.fossify.messages.R
 import org.fossify.messages.adapters.ContactsAdapter
 import org.fossify.messages.databinding.ActivityNewConversationBinding
-import org.fossify.messages.databinding.ItemSuggestedContactBinding
-import org.fossify.messages.extensions.getSuggestedContacts
+import org.fossify.messages.databinding.ItemRecipientChipBinding
+import org.fossify.messages.extensions.addDividerIfNeeded
 import org.fossify.messages.extensions.getThreadId
 import org.fossify.messages.helpers.SmsIntentParser
 import org.fossify.messages.helpers.THREAD_ATTACHMENT_URI
@@ -51,8 +58,13 @@ import java.net.URLDecoder
 import java.util.Locale
 
 class NewConversationActivity : SimpleActivity() {
+    private val PICKED_RECIPIENTS = "picked_recipients"
+
     private var allContacts = ArrayList<SimpleContact>()
     private var privateContacts = ArrayList<SimpleContact>()
+
+    // number -> displayed name, in the order the user picked them
+    private val selectedRecipients = LinkedHashMap<String, String>()
 
     private val binding by viewBinding(ActivityNewConversationBinding::inflate)
 
@@ -71,18 +83,47 @@ class NewConversationActivity : SimpleActivity() {
         window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE)
         binding.newConversationAddress.requestFocus()
 
+        // the To: section lines carry meaning, make them a notch stronger than the stock divider
+        val strongDividerColor = getProperTextColor().adjustAlpha(0.4f)
+        binding.toSectionTopDivider.setBackgroundColor(strongDividerColor)
+        binding.numberSuggestionDivider.setBackgroundColor(strongDividerColor)
+        binding.addContactDivider.setBackgroundColor(strongDividerColor)
+        binding.newConversationAddressUnderline.setBackgroundColor(strongDividerColor)
+
+        // picked recipients survive activity recreation
+        savedInstanceState?.getString(PICKED_RECIPIENTS)?.let { json ->
+            val type = object : TypeToken<LinkedHashMap<String, String>>() {}.type
+            selectedRecipients.putAll(Gson().fromJson(json, type))
+            refreshRecipientChips()
+        }
+
         // READ_CONTACTS permission is not mandatory, but without it we won't be able to show any suggestions during typing
         handlePermission(PERMISSION_READ_CONTACTS) {
             initContacts()
         }
     }
 
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putString(PICKED_RECIPIENTS, Gson().toJson(selectedRecipients))
+    }
+
     override fun onResume() {
         super.onResume()
-        setupTopAppBar(binding.newConversationAppbar, NavigationIcon.Arrow)
+        setupTopAppBar(binding.newConversationAppbar, NavigationIcon.None)
         binding.noContactsPlaceholder2.setTextColor(getProperPrimaryColor())
         binding.noContactsPlaceholder2.underlineText()
-        binding.suggestionsLabel.setTextColor(getProperPrimaryColor())
+
+        val properPrimaryColor = getProperPrimaryColor()
+        binding.newConversationCreate.apply {
+            background = AppCompatResources.getDrawable(
+                this@NewConversationActivity, R.drawable.button_rounded_background
+            )
+            background.applyColorFilter(properPrimaryColor)
+            setOnClickListener { createConversation() }
+        }
+        binding.newConversationCreateText.setTextColor(properPrimaryColor.getContrastColor())
+        updateCreateButtonState()
     }
 
     private fun initContacts() {
@@ -92,31 +133,34 @@ class NewConversationActivity : SimpleActivity() {
 
         fetchContacts()
         binding.newConversationAddress.onTextChangeListener { searchString ->
-            val filteredContacts = ArrayList<SimpleContact>()
-            allContacts.forEach { contact ->
-                if (contact.phoneNumbers.any { it.normalizedNumber.contains(searchString, true) } ||
-                    contact.name.contains(searchString, true) ||
-                    contact.name.contains(searchString.normalizeString(), true) ||
-                    contact.name.normalizeString().contains(searchString, true)) {
-                    filteredContacts.add(contact)
-                }
-            }
+            // typed numbers get a tappable suggestion row below the To: field,
+            // framed by a separator line above and below it
+            val looksLikeNumber = searchString.length > 2 && searchString.none { it.isLetter() }
+            binding.numberSuggestion.beVisibleIf(looksLikeNumber)
+            binding.numberSuggestionDivider.beVisibleIf(looksLikeNumber)
+            binding.numberSuggestionText.text = searchString
 
-            filteredContacts.sortWith(compareBy { !it.name.startsWith(searchString, true) })
-            setupAdapter(filteredContacts)
-
-            binding.newConversationConfirm.beVisibleIf(searchString.length > 2)
+            filterContactsAndSetup(searchString)
         }
 
-        binding.newConversationConfirm.applyColorFilter(getProperTextColor())
-        binding.newConversationConfirm.setOnClickListener {
-            val number = binding.newConversationAddress.value
-            if (isShortCodeWithLetters(number)) {
-                binding.newConversationAddress.setText("")
-                toast(R.string.invalid_short_code, length = Toast.LENGTH_LONG)
-                return@setOnClickListener
+        // suggestion row mirrors the contact rows: primary circle with a white plus
+        val suggestionPrimaryColor = getProperPrimaryColor()
+        binding.numberSuggestionIcon.background.applyColorFilter(suggestionPrimaryColor)
+        binding.numberSuggestionIcon.applyColorFilter(suggestionPrimaryColor.getContrastColor())
+        binding.numberSuggestionText.setTextSize(
+            TypedValue.COMPLEX_UNIT_PX, getTextSize() * 1.27f
+        )
+        binding.numberSuggestion.setOnClickListener {
+            addTypedNumber()
+        }
+
+        binding.newConversationAddress.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_DONE) {
+                addTypedNumber()
+                true
+            } else {
+                false
             }
-            launchThreadActivity(number, number)
         }
 
         binding.noContactsPlaceholder2.setOnClickListener {
@@ -152,7 +196,9 @@ class NewConversationActivity : SimpleActivity() {
     }
 
     private fun fetchContacts() {
-        fillSuggestedContacts {
+        val privateCursor = getMyContactsCursor(false, true)
+        ensureBackgroundThread {
+            privateContacts = MyContactsContentProvider.getSimpleContacts(this, privateCursor)
             SimpleContactsHelper(this).getAvailableContacts(false) {
                 allContacts = it
 
@@ -162,43 +208,140 @@ class NewConversationActivity : SimpleActivity() {
                 }
 
                 runOnUiThread {
-                    setupAdapter(allContacts)
+                    filterContactsAndSetup(binding.newConversationAddress.value)
                 }
             }
         }
     }
 
+    // picked contacts disappear from the list and come back when their chip is removed
+    private fun filterContactsAndSetup(searchString: String) {
+        val filteredContacts = ArrayList<SimpleContact>()
+        allContacts.forEach { contact ->
+            val isAlreadyPicked = contact.phoneNumbers.any {
+                selectedRecipients.containsKey(it.normalizedNumber)
+            }
+            if (isAlreadyPicked) {
+                return@forEach
+            }
+
+            if (searchString.isEmpty() ||
+                contact.phoneNumbers.any { it.normalizedNumber.contains(searchString, true) } ||
+                contact.name.contains(searchString, true) ||
+                contact.name.contains(searchString.normalizeString(), true) ||
+                contact.name.normalizeString().contains(searchString, true)
+            ) {
+                filteredContacts.add(contact)
+            }
+        }
+
+        filteredContacts.sortWith(compareBy { !it.name.startsWith(searchString, true) })
+        setupAdapter(filteredContacts)
+    }
+
+    private fun addTypedNumber() {
+        val number = binding.newConversationAddress.value
+        if (number.isEmpty()) {
+            return
+        }
+
+        if (isShortCodeWithLetters(number)) {
+            binding.newConversationAddress.setText("")
+            toast(R.string.invalid_short_code, length = Toast.LENGTH_LONG)
+            return
+        }
+
+        addRecipient(number, number)
+    }
+
+    private fun addRecipient(number: String, name: String) {
+        binding.newConversationAddress.setText("")
+        if (!selectedRecipients.containsKey(number)) {
+            selectedRecipients[number] = name
+            refreshRecipientChips()
+        }
+    }
+
+    private fun removeRecipient(number: String) {
+        selectedRecipients.remove(number)
+        refreshRecipientChips()
+    }
+
+    private fun refreshRecipientChips() {
+        val chipHolder = binding.selectedRecipientsHolder
+        // every child except the last one (the typing field) is a chip line
+        while (chipHolder.childCount > 1) {
+            chipHolder.removeViewAt(0)
+        }
+
+        val properPrimaryColor = getProperPrimaryColor()
+        val contrastColor = properPrimaryColor.getContrastColor()
+        var index = 0
+        selectedRecipients.forEach { (number, name) ->
+            val chipBinding = ItemRecipientChipBinding.inflate(layoutInflater)
+            chipBinding.apply {
+                root.background.applyColorFilter(properPrimaryColor)
+                recipientChipName.text = name
+                recipientChipName.setTextColor(contrastColor)
+                recipientChipRemove.applyColorFilter(contrastColor)
+                // pressing anywhere on the chip removes it
+                root.setOnClickListener {
+                    removeRecipient(number)
+                }
+                recipientChipRemove.setOnClickListener {
+                    removeRecipient(number)
+                }
+            }
+            chipHolder.addView(chipBinding.root, index++)
+        }
+
+        // the placeholder is only needed while nothing is picked yet
+        binding.newConversationAddress.hint = if (selectedRecipients.isEmpty()) {
+            getString(R.string.add_contact_or_number)
+        } else {
+            ""
+        }
+        filterContactsAndSetup(binding.newConversationAddress.value)
+        updateCreateButtonState()
+    }
+
+    private fun updateCreateButtonState() {
+        val enabled = selectedRecipients.isNotEmpty()
+        binding.newConversationCreate.isEnabled = enabled
+        // keep the disabled state clearly readable for old eyes
+        binding.newConversationCreate.alpha = if (enabled) 1f else 0.8f
+    }
+
+    private fun createConversation() {
+        if (selectedRecipients.isEmpty()) {
+            return
+        }
+
+        val numbers = selectedRecipients.keys
+        val name = if (numbers.size == 1) selectedRecipients.values.first() else ""
+        launchThreadActivity(numbers.joinToString(";"), name)
+    }
+
     private fun setupAdapter(contacts: ArrayList<SimpleContact>) {
         val hasContacts = contacts.isNotEmpty()
         binding.contactsList.beVisibleIf(hasContacts)
-        binding.noContactsPlaceholder.beVisibleIf(!hasContacts)
-        binding.noContactsPlaceholder2.beVisibleIf(
-            !hasContacts && !hasPermission(
-                PERMISSION_READ_CONTACTS
-            )
-        )
-
-        if (!hasContacts) {
-            val placeholderText = if (hasPermission(PERMISSION_READ_CONTACTS)) {
-                org.fossify.commons.R.string.no_contacts_found
-            } else {
-                org.fossify.commons.R.string.no_access_to_contacts
-            }
-
-            binding.noContactsPlaceholder.text = getString(placeholderText)
-        }
+        // no line needed when there is nothing around it to separate
+        binding.addContactDivider.beVisibleIf(hasContacts || binding.numberSuggestion.isVisible())
+        // the "No contacts found" text is intentionally never shown, it doesn't help here
+        binding.noContactsPlaceholder.beGone()
+        binding.noContactsPlaceholder2.beGone()
 
         val currAdapter = binding.contactsList.adapter
         if (currAdapter == null) {
-            ContactsAdapter(this, contacts, binding.contactsList) {
-                hideKeyboard()
+            ContactsAdapter(this, contacts, binding.contactsList, showNumbers = false) {
                 val contact = it as SimpleContact
                 maybeShowNumberPickerDialog(contact.phoneNumbers) { number ->
-                    launchThreadActivity(number.normalizedNumber, contact.name)
+                    addRecipient(number.normalizedNumber, contact.name)
                 }
             }.apply {
                 binding.contactsList.adapter = this
             }
+            binding.contactsList.addDividerIfNeeded()
 
             if (areSystemAnimationsEnabled) {
                 binding.contactsList.scheduleLayoutAnimation()
@@ -208,47 +351,6 @@ class NewConversationActivity : SimpleActivity() {
         }
 
         setupLetterFastscroller(contacts)
-    }
-
-    private fun fillSuggestedContacts(callback: () -> Unit) {
-        val privateCursor = getMyContactsCursor(false, true)
-        ensureBackgroundThread {
-            privateContacts = MyContactsContentProvider.getSimpleContacts(this, privateCursor)
-            val suggestions = getSuggestedContacts(privateContacts)
-            runOnUiThread {
-                binding.suggestionsHolder.removeAllViews()
-                if (suggestions.isEmpty()) {
-                    binding.suggestionsLabel.beGone()
-                    binding.suggestionsScrollview.beGone()
-                } else {
-                    binding.suggestionsLabel.beVisible()
-                    binding.suggestionsScrollview.beVisible()
-                    suggestions.forEach {
-                        val contact = it
-                        ItemSuggestedContactBinding.inflate(layoutInflater).apply {
-                            suggestedContactName.text = contact.name
-                            suggestedContactName.setTextColor(getProperTextColor())
-
-                            if (!isDestroyed) {
-                                SimpleContactsHelper(this@NewConversationActivity).loadContactImage(
-                                    contact.photoUri,
-                                    suggestedContactImage,
-                                    contact.name
-                                )
-                                binding.suggestionsHolder.addView(root)
-                                root.setOnClickListener {
-                                    launchThreadActivity(
-                                        contact.phoneNumbers.first().normalizedNumber,
-                                        contact.name
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-                callback()
-            }
-        }
     }
 
     private fun setupLetterFastscroller(contacts: ArrayList<SimpleContact>) {

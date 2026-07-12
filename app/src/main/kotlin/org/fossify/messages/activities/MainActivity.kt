@@ -62,6 +62,7 @@ import org.fossify.messages.R
 import org.fossify.messages.adapters.ConversationsAdapter
 import org.fossify.messages.adapters.SearchResultsAdapter
 import org.fossify.messages.databinding.ActivityMainBinding
+import org.fossify.messages.extensions.addDividerIfNeeded
 import org.fossify.messages.extensions.checkAndDeleteOldRecycleBinMessages
 import org.fossify.messages.extensions.clearAllMessagesIfNeeded
 import org.fossify.messages.extensions.clearExpiredScheduledMessages
@@ -150,6 +151,7 @@ class MainActivity : SimpleActivity() {
 
         updateTextColors(binding.mainCoordinator)
         binding.searchHolder.setBackgroundColor(getProperBackgroundColor())
+        binding.conversationsTopDivider.setBackgroundColor(getProperTextColor().adjustAlpha(0.4f))
 
         val properPrimaryColor = getProperPrimaryColor()
         binding.noConversationsPlaceholder2.setTextColor(properPrimaryColor)
@@ -416,25 +418,13 @@ class MainActivity : SimpleActivity() {
             )
 
             binding.conversationsList.adapter = currAdapter
-            addListDividerIfNeeded(binding.conversationsList)
+            binding.conversationsList.addDividerIfNeeded()
 
             if (areSystemAnimationsEnabled) {
                 binding.conversationsList.scheduleLayoutAnimation()
             }
         }
         return currAdapter as ConversationsAdapter
-    }
-
-    private fun addListDividerIfNeeded(recyclerView: androidx.recyclerview.widget.RecyclerView) {
-        if (recyclerView.itemDecorationCount == 0) {
-            val divider = DividerItemDecoration(this, DividerItemDecoration.VERTICAL).apply {
-                setDrawable(GradientDrawable().apply {
-                    setColor(resources.getColor(org.fossify.commons.R.color.divider_grey, theme))
-                    setSize(0, resources.getDimensionPixelSize(org.fossify.commons.R.dimen.divider_height))
-                })
-            }
-            recyclerView.addItemDecoration(divider)
-        }
     }
 
     private fun setupConversations(
@@ -643,7 +633,7 @@ class MainActivity : SimpleActivity() {
                 }.apply {
                     binding.searchResultsList.adapter = this
                 }
-                addListDividerIfNeeded(binding.searchResultsList)
+                binding.searchResultsList.addDividerIfNeeded()
             } else {
                 (currAdapter as SearchResultsAdapter).updateItems(searchResults, searchedText)
             }

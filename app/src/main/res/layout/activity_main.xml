@@ -45,6 +45,14 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent">
 
+                <ImageView
+                    android:id="@+id/conversations_top_divider"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/divider_height"
+                    android:layout_alignParentTop="true"
+                    android:background="@color/divider_grey"
+                    android:importantForAccessibility="no" />
+
                 <com.google.android.material.progressindicator.LinearProgressIndicator
                     android:id="@+id/conversations_progress_bar"
                     android:layout_width="match_parent"
@@ -88,7 +96,8 @@
                 <com.qtalk.recyclerviewfastscroller.RecyclerViewFastScroller
                     android:id="@+id/conversations_fastscroller"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content">
+                    android:layout_height="wrap_content"
+                    android:layout_below="@+id/conversations_top_divider">
 
                     <org.fossify.commons.views.MyRecyclerView
                         android:id="@+id/conversations_list"

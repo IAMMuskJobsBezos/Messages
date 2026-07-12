@@ -15,4 +15,5 @@
     <dimen name="attachment_button_width">90dp</dimen>
     <dimen name="default_keyboard_height">250dp</dimen>
     <dimen name="new_conversation_icon_size">28dp</dimen>
+    <dimen name="dropdown_option_margin">48dp</dimen>
 </resources>
