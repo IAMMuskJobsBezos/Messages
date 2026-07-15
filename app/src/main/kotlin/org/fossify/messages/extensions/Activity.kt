@@ -19,8 +19,6 @@ import org.fossify.commons.helpers.PERMISSION_CALL_PHONE
 import org.fossify.commons.helpers.SimpleContactsHelper
 import org.fossify.commons.helpers.ensureBackgroundThread
 import org.fossify.commons.models.SimpleContact
-import org.fossify.messages.activities.ConversationDetailsActivity
-import org.fossify.messages.helpers.THREAD_ID
 import java.util.Locale
 
 fun BaseSimpleActivity.dialNumber(phoneNumber: String, callback: (() -> Unit)? = null) {
@@ -107,12 +105,5 @@ fun Activity.startContactDetailsIntent(contact: SimpleContact) {
                 launchViewContactIntent(publicUri)
             }
         }
-    }
-}
-
-fun Activity.launchConversationDetails(threadId: Long) {
-    Intent(this, ConversationDetailsActivity::class.java).apply {
-        putExtra(THREAD_ID, threadId)
-        startActivity(this)
     }
 }

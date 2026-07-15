@@ -116,7 +116,7 @@ abstract class BaseConversationsAdapter(
         holder.bindView(
             conversation,
             allowSingleClick = true,
-            allowLongClick = true
+            allowLongClick = false
         ) { itemView, _ ->
             setupView(itemView, conversation)
         }

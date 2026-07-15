@@ -838,20 +838,6 @@ fun Context.insertNewSMS(
     }
 }
 
-fun Context.removeAllArchivedConversations(callback: (() -> Unit)? = null) {
-    ensureBackgroundThread {
-        try {
-            for (conversation in conversationsDB.getAllArchived()) {
-                deleteConversation(conversation.threadId)
-            }
-            toast(R.string.archive_emptied_successfully)
-            callback?.invoke()
-        } catch (_: Exception) {
-            toast(org.fossify.commons.R.string.unknown_error_occurred)
-        }
-    }
-}
-
 fun Context.deleteConversation(threadId: Long) {
     var uri = Sms.CONTENT_URI
     val selection = "${Sms.THREAD_ID} = ?"

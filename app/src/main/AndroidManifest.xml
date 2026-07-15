@@ -16,6 +16,7 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.READ_SYNC_SETTINGS" />
     <uses-permission android:name="android.permission.CALL_PHONE" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
     <uses-permission android:name="android.permission.READ_CONTACTS" />
     <uses-permission
@@ -47,20 +48,6 @@
             android:name=".activities.MainActivity"
             android:configChanges="orientation"
             android:exported="true" />
-
-        <activity
-            android:name=".activities.RecycleBinConversationsActivity"
-            android:configChanges="orientation"
-            android:exported="true"
-            android:label="@string/recycle_bin"
-            android:parentActivityName=".activities.MainActivity" />
-
-        <activity
-            android:name=".activities.ArchivedConversationsActivity"
-            android:configChanges="orientation"
-            android:exported="true"
-            android:label="@string/archived_conversations"
-            android:parentActivityName=".activities.MainActivity" />
 
         <activity
             android:name=".activities.ThreadActivity"
@@ -105,59 +92,10 @@
         </activity>
 
         <activity
-            android:name=".activities.SettingsActivity"
-            android:configChanges="orientation"
-            android:exported="true"
-            android:label="@string/settings"
-            android:parentActivityName=".activities.MainActivity">
-
-            <intent-filter>
-                <action android:name="android.intent.action.APPLICATION_PREFERENCES" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-        </activity>
-
-        <activity
-            android:name="org.fossify.commons.activities.AboutActivity"
-            android:configChanges="orientation"
-            android:exported="false"
-            android:label="@string/about"
-            android:parentActivityName=".activities.MainActivity" />
-
-        <activity
-            android:name="org.fossify.commons.activities.CustomizationActivity"
-            android:configChanges="orientation"
-            android:exported="false"
-            android:label="@string/customize_colors"
-            android:parentActivityName=".activities.SettingsActivity" />
-
-        <activity
-            android:name="org.fossify.commons.activities.ManageBlockedNumbersActivity"
-            android:configChanges="orientation"
-            android:exported="false"
-            android:label="@string/blocked_numbers"
-            android:parentActivityName=".activities.SettingsActivity"
-            tools:replace="android:label" />
-
-        <activity
-            android:name=".activities.ManageBlockedKeywordsActivity"
-            android:configChanges="orientation"
-            android:exported="false"
-            android:label="@string/blocked_keywords"
-            android:parentActivityName=".activities.SettingsActivity" />
-
-        <activity
             android:name=".activities.VCardViewerActivity"
             android:configChanges="orientation"
             android:exported="false"
             android:label="@string/contact_details"
-            android:parentActivityName=".activities.ThreadActivity" />
-
-        <activity
-            android:name=".activities.ConversationDetailsActivity"
-            android:configChanges="orientation"
-            android:exported="false"
-            android:label="@string/conversation_details"
             android:parentActivityName=".activities.ThreadActivity" />
 
         <service

@@ -1,10 +1,10 @@
 package org.fossify.messages.adapters
 
-import android.annotation.SuppressLint
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.Drawable
+import android.provider.Telephony
 import android.util.TypedValue
 import android.view.Menu
 import android.view.View
@@ -33,21 +33,15 @@ import org.fossify.commons.extensions.applyColorFilter
 import org.fossify.commons.extensions.beGone
 import org.fossify.commons.extensions.beVisible
 import org.fossify.commons.extensions.beVisibleIf
-import org.fossify.commons.extensions.copyToClipboard
-import org.fossify.commons.extensions.formatDateOrTime
 import org.fossify.commons.extensions.getContrastColor
 import org.fossify.commons.extensions.getProperPrimaryColor
 import org.fossify.commons.extensions.getTextSize
-import org.fossify.commons.extensions.getTimeFormat
-import org.fossify.commons.extensions.shareTextIntent
 import org.fossify.commons.extensions.showErrorToast
 import org.fossify.commons.extensions.usableScreenSize
 import org.fossify.commons.helpers.FontHelper
-import org.fossify.commons.helpers.SimpleContactsHelper
 import org.fossify.commons.helpers.ensureBackgroundThread
 import org.fossify.commons.views.MyRecyclerView
 import org.fossify.messages.R
-import org.fossify.messages.activities.NewConversationActivity
 import org.fossify.messages.activities.SimpleActivity
 import org.fossify.messages.activities.ThreadActivity
 import org.fossify.messages.activities.VCardViewerActivity
@@ -55,38 +49,23 @@ import org.fossify.messages.databinding.ItemAttachmentDocumentBinding
 import org.fossify.messages.databinding.ItemAttachmentImageBinding
 import org.fossify.messages.databinding.ItemAttachmentVcardBinding
 import org.fossify.messages.databinding.ItemMessageBinding
-import org.fossify.messages.databinding.ItemThreadDateTimeBinding
-import org.fossify.messages.databinding.ItemThreadErrorBinding
 import org.fossify.messages.databinding.ItemThreadSendingBinding
-import org.fossify.messages.databinding.ItemThreadSuccessBinding
-import org.fossify.messages.dialogs.DeleteConfirmationDialog
-import org.fossify.messages.dialogs.MessageDetailsDialog
-import org.fossify.messages.dialogs.SelectTextDialog
 import org.fossify.messages.extensions.config
-import org.fossify.messages.extensions.getContactFromAddress
 import org.fossify.messages.extensions.isImageMimeType
 import org.fossify.messages.extensions.isVCardMimeType
 import org.fossify.messages.extensions.isVideoMimeType
 import org.fossify.messages.extensions.launchViewIntent
-import org.fossify.messages.extensions.startContactDetailsIntent
-import org.fossify.messages.extensions.subscriptionManagerCompat
 import org.fossify.messages.helpers.EXTRA_VCARD_URI
-import org.fossify.messages.helpers.THREAD_DATE_TIME
 import org.fossify.messages.helpers.THREAD_RECEIVED_MESSAGE
 import org.fossify.messages.helpers.THREAD_SENT_MESSAGE
-import org.fossify.messages.helpers.THREAD_SENT_MESSAGE_ERROR
 import org.fossify.messages.helpers.THREAD_SENT_MESSAGE_SENDING
-import org.fossify.messages.helpers.THREAD_SENT_MESSAGE_SENT
 import org.fossify.messages.helpers.generateStableId
 import org.fossify.messages.helpers.setupDocumentPreview
 import org.fossify.messages.helpers.setupVCardPreview
 import org.fossify.messages.models.Attachment
 import org.fossify.messages.models.Message
 import org.fossify.messages.models.ThreadItem
-import org.fossify.messages.models.ThreadItem.ThreadDateTime
-import org.fossify.messages.models.ThreadItem.ThreadError
 import org.fossify.messages.models.ThreadItem.ThreadSending
-import org.fossify.messages.models.ThreadItem.ThreadSent
 import org.joda.time.DateTime
 
 class ThreadAdapter(
@@ -97,15 +76,11 @@ class ThreadAdapter(
     val deleteMessages: (messages: List<Message>, toRecycleBin: Boolean, fromRecycleBin: Boolean) -> Unit
 ) : MyRecyclerViewListAdapter<ThreadItem>(activity, recyclerView, ThreadItemDiffCallback(), itemClick) {
     private var fontSize = activity.getTextSize()
-
-    @SuppressLint("MissingPermission")
-    private val hasMultipleSIMCards = (activity.subscriptionManagerCompat().activeSubscriptionInfoList?.size ?: 0) > 1
     private val maxChatBubbleWidth = (activity.usableScreenSize.x * 0.8f).toInt()
 
     companion object {
         private const val MAX_MEDIA_HEIGHT_RATIO = 3
-        private const val SIM_BITS = 21
-        private const val SIM_MASK = (1L shl SIM_BITS) - 1
+        private const val MINUTE_IN_MILLIS = 60_000L
     }
 
     init {
@@ -116,24 +91,7 @@ class ThreadAdapter(
 
     override fun getActionMenuId() = R.menu.cab_thread
 
-    override fun prepareActionMode(menu: Menu) {
-        val isOneItemSelected = isOneItemSelected()
-        val selectedMessages = getSelectedItems().filterIsInstance<Message>()
-        val hasText = selectedMessages.any { it.body.isNotEmpty() }
-        val showSaveAs = getSelectedItems().all {
-            it is Message && (it.attachment?.attachments?.size ?: 0) > 0
-        } && getSelectedAttachments().isNotEmpty()
-
-        menu.apply {
-            findItem(R.id.cab_copy_to_clipboard).isVisible = hasText
-            findItem(R.id.cab_save_as).isVisible = showSaveAs
-            findItem(R.id.cab_share).isVisible = isOneItemSelected && hasText
-            findItem(R.id.cab_forward_message).isVisible = isOneItemSelected
-            findItem(R.id.cab_select_text).isVisible = isOneItemSelected && hasText
-            findItem(R.id.cab_properties).isVisible = isOneItemSelected
-            findItem(R.id.cab_restore).isVisible = isRecycleBin
-        }
-    }
+    override fun prepareActionMode(menu: Menu) {}
 
     override fun actionItemPressed(id: Int) {
         if (selectedKeys.isEmpty()) {
@@ -141,21 +99,13 @@ class ThreadAdapter(
         }
 
         when (id) {
-            R.id.cab_copy_to_clipboard -> copyToClipboard()
-            R.id.cab_save_as -> saveAs()
-            R.id.cab_share -> shareText()
-            R.id.cab_forward_message -> forwardMessage()
-            R.id.cab_select_text -> selectText()
             R.id.cab_delete -> askConfirmDelete()
-            R.id.cab_restore -> askConfirmRestore()
-            R.id.cab_select_all -> selectAll()
-            R.id.cab_properties -> showMessageDetails()
         }
     }
 
     override fun getSelectableItemCount() = currentList.filterIsInstance<Message>().size
 
-    override fun getIsItemSelectable(position: Int) = !isThreadDateTime(position)
+    override fun getIsItemSelectable(position: Int) = true
 
     override fun getItemSelectionKey(position: Int): Int? {
         return (currentList.getOrNull(position) as? Message)?.getSelectionKey()
@@ -171,9 +121,6 @@ class ThreadAdapter(
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val binding = when (viewType) {
-            THREAD_DATE_TIME -> ItemThreadDateTimeBinding.inflate(layoutInflater, parent, false)
-            THREAD_SENT_MESSAGE_ERROR -> ItemThreadErrorBinding.inflate(layoutInflater, parent, false)
-            THREAD_SENT_MESSAGE_SENT -> ItemThreadSuccessBinding.inflate(layoutInflater, parent, false)
             THREAD_SENT_MESSAGE_SENDING -> ItemThreadSendingBinding.inflate(layoutInflater, parent, false)
             else -> ItemMessageBinding.inflate(layoutInflater, parent, false)
         }
@@ -183,13 +130,9 @@ class ThreadAdapter(
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val item = getItem(position)
-        val isClickable = item is ThreadError || item is Message
-        val isLongClickable = item is Message
-        holder.bindView(item, isClickable, isLongClickable) { itemView, _ ->
+        val isClickable = item is Message
+        holder.bindView(item, isClickable, allowLongClick = false) { itemView, _ ->
             when (item) {
-                is ThreadDateTime -> setupDateTime(itemView, item)
-                is ThreadError -> setupThreadError(itemView)
-                is ThreadSent -> setupThreadSuccess(itemView, item.delivered)
                 is ThreadSending -> setupThreadSending(itemView)
                 is Message -> setupView(holder, itemView, item)
             }
@@ -200,74 +143,15 @@ class ThreadAdapter(
     override fun getItemId(position: Int): Long {
         return when (val item = getItem(position)) {
             is Message -> item.getStableId()
-            is ThreadDateTime -> {
-                val sim = (item.simID.hashCode().toLong() and SIM_MASK)
-                val key = (item.date.toLong() shl SIM_BITS) or sim
-                generateStableId(THREAD_DATE_TIME, key)
-            }
-            is ThreadError -> generateStableId(THREAD_SENT_MESSAGE_ERROR, item.messageId)
             is ThreadSending -> generateStableId(THREAD_SENT_MESSAGE_SENDING, item.messageId)
-            is ThreadSent -> generateStableId(THREAD_SENT_MESSAGE_SENT, item.messageId)
         }
     }
 
     override fun getItemViewType(position: Int): Int {
         return when (val item = getItem(position)) {
-            is ThreadDateTime -> THREAD_DATE_TIME
-            is ThreadError -> THREAD_SENT_MESSAGE_ERROR
-            is ThreadSent -> THREAD_SENT_MESSAGE_SENT
             is ThreadSending -> THREAD_SENT_MESSAGE_SENDING
             is Message -> if (item.isReceivedMessage()) THREAD_RECEIVED_MESSAGE else THREAD_SENT_MESSAGE
         }
-    }
-
-    private fun copyToClipboard() {
-        val selectedMessages = getSelectedItems().filterIsInstance<Message>()
-        if (selectedMessages.isEmpty()) return
-
-        val textToCopy = if (selectedMessages.size == 1) {
-            selectedMessages.first().body
-        } else {
-            selectedMessages.filter { it.body.isNotEmpty() }.joinToString("\n\n") { message ->
-                val format = "${activity.config.dateFormat}, ${activity.getTimeFormat()}"
-                val dateTime = DateTime(message.millis()).toString(format)
-                val sender = if (message.isReceivedMessage()) message.senderName else activity.getString(R.string.me)
-                "[$dateTime] $sender: ${message.body}"
-            }
-        }
-
-        if (textToCopy.isNotEmpty()) {
-            activity.copyToClipboard(textToCopy)
-        }
-    }
-
-    private fun getSelectedAttachments(): List<Attachment> {
-        val selectedMessages = getSelectedItems().filterIsInstance<Message>()
-        return selectedMessages.flatMap { it.attachment?.attachments.orEmpty() }
-    }
-
-    private fun saveAs() {
-        val attachments = getSelectedAttachments()
-        if (attachments.isNotEmpty()) {
-            (activity as ThreadActivity).saveMMS(attachments)
-        }
-    }
-
-    private fun shareText() {
-        val firstItem = getSelectedItems().firstOrNull() as? Message ?: return
-        activity.shareTextIntent(firstItem.body)
-    }
-
-    private fun selectText() {
-        val firstItem = getSelectedItems().firstOrNull() as? Message ?: return
-        if (firstItem.body.trim().isNotEmpty()) {
-            SelectTextDialog(activity, firstItem.body)
-        }
-    }
-
-    private fun showMessageDetails() {
-        val message = getSelectedItems().firstOrNull() as? Message ?: return
-        MessageDetailsDialog(activity, message)
     }
 
     private fun askConfirmDelete() {
@@ -281,60 +165,16 @@ class ThreadAdapter(
             return
         }
 
-        val baseString = if (activity.config.useRecycleBin && !isRecycleBin) {
-            org.fossify.commons.R.string.move_to_recycle_bin_confirmation
-        } else {
-            org.fossify.commons.R.string.deletion_confirmation
-        }
-        val question = String.format(resources.getString(baseString), items)
+        val question = String.format(resources.getString(org.fossify.commons.R.string.deletion_confirmation), items)
 
-        DeleteConfirmationDialog(activity, question, activity.config.useRecycleBin && !isRecycleBin) { skipRecycleBin ->
+        // deleting is always permanent now, there is no recycle bin to move messages into
+        ConfirmationDialog(activity, question) {
             ensureBackgroundThread {
                 val messagesToRemove = getSelectedItems()
                 if (messagesToRemove.isNotEmpty()) {
-                    val toRecycleBin = !skipRecycleBin && activity.config.useRecycleBin && !isRecycleBin
-                    deleteMessages(messagesToRemove.filterIsInstance<Message>(), toRecycleBin, false)
+                    deleteMessages(messagesToRemove.filterIsInstance<Message>(), false, false)
                 }
             }
-        }
-    }
-
-    private fun askConfirmRestore() {
-        val itemsCnt = selectedKeys.size
-
-        // not sure how we can get UnknownFormatConversionException here, so show the error and hope that someone reports it
-        val items = try {
-            resources.getQuantityString(R.plurals.delete_messages, itemsCnt, itemsCnt)
-        } catch (e: Exception) {
-            activity.showErrorToast(e)
-            return
-        }
-
-        val baseString = R.string.restore_confirmation
-        val question = String.format(resources.getString(baseString), items)
-
-        ConfirmationDialog(activity, question) {
-            ensureBackgroundThread {
-                val messagesToRestore = getSelectedItems()
-                if (messagesToRestore.isNotEmpty()) {
-                    deleteMessages(messagesToRestore.filterIsInstance<Message>(), false, true)
-                }
-            }
-        }
-    }
-
-    private fun forwardMessage() {
-        val message = getSelectedItems().firstOrNull() as? Message ?: return
-        val attachment = message.attachment?.attachments?.firstOrNull()
-        Intent(activity, NewConversationActivity::class.java).apply {
-            action = Intent.ACTION_SEND
-            putExtra(Intent.EXTRA_TEXT, message.body)
-
-            if (attachment != null) {
-                putExtra(Intent.EXTRA_STREAM, attachment.getUri())
-            }
-
-            activity.startActivity(this)
         }
     }
 
@@ -343,8 +183,6 @@ class ThreadAdapter(
             selectedKeys.contains((it as? Message)?.getSelectionKey() ?: 0)
         } as ArrayList<ThreadItem>
     }
-
-    private fun isThreadDateTime(position: Int) = currentList.getOrNull(position) is ThreadDateTime
 
     fun updateMessages(
         newMessages: ArrayList<ThreadItem>,
@@ -380,10 +218,16 @@ class ThreadAdapter(
                 }
             }
 
+            // Failed sends show a reload icon directly over the bubble - tapping it (or the
+            // body underneath, once the overlay is gone) re-sends via handleItemClick.
+            threadMessageFailedOverlay.setOnClickListener {
+                holder.viewClicked(message)
+            }
+
             if (message.isReceivedMessage()) {
                 setupReceivedMessageView(messageBinding = this, message = message)
             } else {
-                setupSentMessageView(messageBinding = this, message = message)
+                setupSentMessageView(holder = holder, messageBinding = this, message = message)
             }
 
             if (message.attachment?.attachments?.isNotEmpty() == true) {
@@ -415,42 +259,23 @@ class ThreadAdapter(
                 applyTo(threadMessageHolder)
             }
 
-            threadMessageSenderPhoto.beVisible()
-            threadMessageSenderPhoto.setOnClickListener {
-                val contact = message.getSender()!!
-                activity.getContactFromAddress(contact.phoneNumbers.first().normalizedNumber) {
-                    if (it != null) {
-                        activity.startContactDetailsIntent(it)
-                    }
-                }
-            }
-
             threadMessageBody.apply {
                 background = AppCompatResources.getDrawable(activity, R.drawable.item_received_background)
                 setTextColor(textColor)
                 setLinkTextColor(activity.getProperPrimaryColor())
             }
 
-            if (!activity.isFinishing && !activity.isDestroyed) {
-                val contactLetterIcon = SimpleContactsHelper(activity).getContactLetterIcon(message.senderName)
-                val placeholder = contactLetterIcon.toDrawable(activity.resources)
-
-                val options = RequestOptions()
-                    .diskCacheStrategy(DiskCacheStrategy.RESOURCE)
-                    .error(placeholder)
-                    .centerCrop()
-
-                Glide.with(activity)
-                    .load(message.senderPhotoUri)
-                    .placeholder(placeholder)
-                    .apply(options)
-                    .apply(RequestOptions.circleCropTransform())
-                    .into(threadMessageSenderPhoto)
+            threadMessageLabel.apply {
+                beVisible()
+                text = "${message.senderName} | ${formatBubbleLabelTime(message)}"
+                setTextColor(textColor)
             }
+
+            threadMessageFailedOverlay.beGone()
         }
     }
 
-    private fun setupSentMessageView(messageBinding: ItemMessageBinding, message: Message) {
+    private fun setupSentMessageView(holder: ViewHolder, messageBinding: ItemMessageBinding, message: Message) {
         messageBinding.apply {
             with(ConstraintSet()) {
                 clone(threadMessageHolder)
@@ -487,6 +312,45 @@ class ThreadAdapter(
                     setCompoundDrawables(null, null, null, null)
                 }
             }
+
+            val isFailed = message.type == Telephony.Sms.MESSAGE_TYPE_FAILED
+
+            // Always visible in the same spot - failed vs. resolved only swaps the text, so it
+            // never jumps position (the label used to disappear/reappear here, which read as
+            // the timestamp "moving" once a retry succeeded).
+            threadMessageLabel.apply {
+                beVisible()
+                text = if (isFailed) activity.getString(R.string.message_not_sent_touch_retry) else formatBubbleLabelTime(message)
+                setTextColor(textColor)
+                updateLayoutParams<RelativeLayout.LayoutParams> {
+                    removeRule(RelativeLayout.ALIGN_START)
+                    addRule(RelativeLayout.ALIGN_PARENT_END)
+                }
+                setOnClickListener { if (isFailed) holder.viewClicked(message) }
+            }
+
+            threadMessageFailedOverlay.apply {
+                beVisibleIf(isFailed)
+                if (isFailed) {
+                    applyColorFilter(contrastColor)
+                }
+            }
+        }
+    }
+
+    private fun formatBubbleLabelTime(message: Message): String {
+        val now = DateTime.now()
+        val messageTime = DateTime(message.millis())
+
+        if (now.millis - messageTime.millis < MINUTE_IN_MILLIS) {
+            return activity.getString(R.string.now_label)
+        }
+
+        val time = messageTime.toString("h:mm a")
+        return when {
+            now.toLocalDate() == messageTime.toLocalDate() -> time
+            now.minusDays(1).toLocalDate() == messageTime.toLocalDate() -> "${activity.getString(R.string.yesterday_label)}, $time"
+            else -> "${messageTime.toString("MMM d").uppercase()}, $time"
         }
     }
 
@@ -583,54 +447,10 @@ class ThreadAdapter(
         parent.addView(attachmentView)
     }
 
-    private fun setupDateTime(view: View, dateTime: ThreadDateTime) {
-        ItemThreadDateTimeBinding.bind(view).apply {
-            threadDateTime.apply {
-                text = (dateTime.date * 1000L).formatDateOrTime(
-                    context = context,
-                    hideTimeOnOtherDays = false,
-                    showCurrentYear = false
-                )
-                setTextSize(TypedValue.COMPLEX_UNIT_PX, fontSize)
-            }
-            threadDateTime.setTextColor(textColor)
-
-            threadSimIcon.beVisibleIf(hasMultipleSIMCards)
-            threadSimNumber.beVisibleIf(hasMultipleSIMCards)
-            if (hasMultipleSIMCards) {
-                threadSimNumber.text = dateTime.simID
-                threadSimNumber.setTextColor(textColor.getContrastColor())
-                threadSimIcon.applyColorFilter(textColor)
-            }
-        }
-    }
-
-    private fun setupThreadSuccess(view: View, isDelivered: Boolean) {
-        ItemThreadSuccessBinding.bind(view).apply {
-            threadSuccess.setImageResource(if (isDelivered) R.drawable.ic_check_double_vector else org.fossify.commons.R.drawable.ic_check_vector)
-            threadSuccess.applyColorFilter(textColor)
-        }
-    }
-
-    private fun setupThreadError(view: View) {
-        val binding = ItemThreadErrorBinding.bind(view)
-        binding.threadError.setTextSize(TypedValue.COMPLEX_UNIT_PX, fontSize - 4)
-    }
-
     private fun setupThreadSending(view: View) {
         ItemThreadSendingBinding.bind(view).threadSending.apply {
             setTextSize(TypedValue.COMPLEX_UNIT_PX, fontSize)
             setTextColor(textColor)
-        }
-    }
-
-    override fun onViewRecycled(holder: ViewHolder) {
-        super.onViewRecycled(holder)
-        if (!activity.isDestroyed && !activity.isFinishing) {
-            val binding = (holder as ThreadViewHolder).binding
-            if (binding is ItemMessageBinding) {
-                Glide.with(activity).clear(binding.threadMessageSenderPhoto)
-            }
         }
     }
 
@@ -642,14 +462,8 @@ private class ThreadItemDiffCallback : DiffUtil.ItemCallback<ThreadItem>() {
     override fun areItemsTheSame(oldItem: ThreadItem, newItem: ThreadItem): Boolean {
         if (oldItem::class.java != newItem::class.java) return false
         return when (oldItem) {
-            is ThreadError -> oldItem.messageId == (newItem as ThreadError).messageId
-            is ThreadSent -> oldItem.messageId == (newItem as ThreadSent).messageId
             is ThreadSending -> oldItem.messageId == (newItem as ThreadSending).messageId
             is Message -> Message.areItemsTheSame(oldItem, newItem as Message)
-            is ThreadDateTime -> {
-                val new = newItem as ThreadDateTime
-                oldItem.date == new.date && oldItem.simID == new.simID
-            }
         }
     }
 
@@ -657,9 +471,6 @@ private class ThreadItemDiffCallback : DiffUtil.ItemCallback<ThreadItem>() {
         if (oldItem::class.java != newItem::class.java) return false
         return when (oldItem) {
             is ThreadSending -> true
-            is ThreadDateTime -> oldItem.simID == (newItem as ThreadDateTime).simID
-            is ThreadError -> oldItem.messageText == (newItem as ThreadError).messageText
-            is ThreadSent -> oldItem.delivered == (newItem as ThreadSent).delivered
             is Message -> Message.areContentsTheSame(oldItem, newItem as Message)
         }
     }

@@ -8,30 +8,8 @@ import org.fossify.commons.helpers.SimpleContactsHelper
 import org.fossify.commons.helpers.ensureBackgroundThread
 import org.fossify.messages.R
 import org.fossify.messages.databinding.ItemAttachmentDocumentBinding
-import org.fossify.messages.databinding.ItemAttachmentDocumentPreviewBinding
 import org.fossify.messages.databinding.ItemAttachmentVcardBinding
-import org.fossify.messages.databinding.ItemAttachmentVcardPreviewBinding
 import org.fossify.messages.extensions.*
-
-fun ItemAttachmentDocumentPreviewBinding.setupDocumentPreview(
-    uri: Uri,
-    title: String,
-    mimeType: String,
-    onClick: (() -> Unit)? = null,
-    onLongClick: (() -> Unit)? = null,
-    onRemoveButtonClicked: (() -> Unit)? = null
-) {
-    documentAttachmentHolder.setupDocumentPreview(uri, title, mimeType, onClick, onLongClick)
-    removeAttachmentButtonHolder.removeAttachmentButton.apply {
-        beVisible()
-        background.applyColorFilter(context.getProperPrimaryColor())
-        if (onRemoveButtonClicked != null) {
-            setOnClickListener {
-                onRemoveButtonClicked.invoke()
-            }
-        }
-    }
-}
 
 fun ItemAttachmentDocumentBinding.setupDocumentPreview(
     uri: Uri,
@@ -76,28 +54,6 @@ fun ItemAttachmentDocumentBinding.setupDocumentPreview(
     root.setOnLongClickListener {
         onLongClick?.invoke()
         true
-    }
-}
-
-fun ItemAttachmentVcardPreviewBinding.setupVCardPreview(
-    activity: Activity,
-    uri: Uri,
-    onClick: (() -> Unit)? = null,
-    onLongClick: (() -> Unit)? = null,
-    onRemoveButtonClicked: (() -> Unit)? = null,
-) {
-    vcardProgress.beVisible()
-    vcardAttachmentHolder.setupVCardPreview(activity = activity, uri = uri, attachment = true, onClick = onClick, onLongClick = onLongClick) {
-        vcardProgress.beGone()
-        removeAttachmentButtonHolder.removeAttachmentButton.apply {
-            beVisible()
-            background.applyColorFilter(activity.getProperPrimaryColor())
-            if (onRemoveButtonClicked != null) {
-                setOnClickListener {
-                    onRemoveButtonClicked.invoke()
-                }
-            }
-        }
     }
 }
 

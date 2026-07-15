@@ -55,7 +55,6 @@ import org.fossify.commons.helpers.PERMISSION_SEND_SMS
 import org.fossify.commons.helpers.SHORT_ANIMATION_DURATION
 import org.fossify.commons.helpers.ensureBackgroundThread
 import org.fossify.commons.helpers.isQPlus
-import org.fossify.commons.models.FAQItem
 import org.fossify.commons.models.Release
 import org.fossify.messages.BuildConfig
 import org.fossify.messages.R

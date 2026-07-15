@@ -5,7 +5,7 @@
     android:id="@+id/thread_message_holder"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginTop="@dimen/small_margin"
+    android:layout_marginTop="@dimen/big_margin"
     android:foreground="@drawable/selector"
     android:paddingHorizontal="@dimen/activity_margin">
 
@@ -18,23 +18,10 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintWidth_percent="0.8">
 
-        <ImageView
-            android:id="@+id/thread_message_sender_photo"
-            android:layout_width="@dimen/list_icon_size_medium"
-            android:layout_height="@dimen/list_icon_size_medium"
-            android:layout_alignBottom="@+id/thread_message_body"
-            android:layout_alignParentStart="true"
-            android:layout_marginEnd="@dimen/medium_margin"
-            android:src="@drawable/ic_person_vector"
-            android:visibility="gone"
-            tools:ignore="ContentDescription"
-            tools:visibility="visible" />
-
         <LinearLayout
             android:id="@+id/thread_message_attachments_holder"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_toEndOf="@id/thread_message_sender_photo"
             android:divider="@drawable/linear_layout_vertical_divider"
             android:orientation="vertical"
             android:showDividers="middle" />
@@ -57,7 +44,6 @@
             android:layout_height="wrap_content"
             android:layout_below="@+id/thread_message_attachments_holder"
             android:layout_marginVertical="@dimen/tiny_margin"
-            android:layout_toEndOf="@id/thread_message_sender_photo"
             android:autoLink="email|web"
             android:background="@drawable/item_received_background"
             android:drawablePadding="8dp"
@@ -65,5 +51,34 @@
             android:textSize="@dimen/normal_text_size"
             tools:drawableEndCompat="@drawable/scheduled_message_icon"
             tools:text="Message content" />
+
+        <org.fossify.commons.views.MyTextView
+            android:id="@+id/thread_message_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/thread_message_body"
+            android:layout_alignStart="@id/thread_message_body"
+            android:layout_marginTop="@dimen/small_margin"
+            android:textSize="@dimen/medium_text_size"
+            tools:text="Stanford | AUG 15, 2:10 AM" />
+
+        <!-- Failed send: overlays thread_message_body exactly: tap anywhere on the bubble to retry -->
+        <ImageView
+            android:id="@+id/thread_message_failed_overlay"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignTop="@id/thread_message_body"
+            android:layout_alignBottom="@id/thread_message_body"
+            android:layout_alignStart="@id/thread_message_body"
+            android:layout_alignEnd="@id/thread_message_body"
+            android:background="#66000000"
+            android:clickable="true"
+            android:focusable="true"
+            android:padding="@dimen/small_margin"
+            android:scaleType="centerInside"
+            android:src="@drawable/ic_reload_vector"
+            android:visibility="gone"
+            tools:ignore="ContentDescription"
+            tools:visibility="visible" />
     </RelativeLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -6,116 +6,33 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content">
 
-    <RelativeLayout
-        android:id="@+id/scheduled_message_holder"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="@dimen/normal_margin"
-        android:layout_marginTop="@dimen/medium_margin"
-        android:layout_marginEnd="@dimen/medium_margin"
-        android:background="@drawable/section_holder_stroke"
-        android:orientation="horizontal"
-        android:visibility="gone"
-        app:layout_constraintBottom_toTopOf="@id/thread_attachments_recyclerview"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_goneMarginBottom="@dimen/medium_margin"
-        tools:visibility="visible">
-
-        <ImageView
-            android:id="@+id/scheduled_message_icon"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignTop="@+id/scheduled_message_button"
-            android:layout_alignBottom="@+id/scheduled_message_button"
-            android:paddingStart="@dimen/medium_margin"
-            android:paddingTop="@dimen/medium_margin"
-            android:paddingEnd="@dimen/small_margin"
-            android:paddingBottom="@dimen/medium_margin"
-            android:src="@drawable/ic_clock_vector" />
-
-        <org.fossify.commons.views.MyTextView
-            android:id="@+id/scheduled_message_button"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_gravity="start"
-            android:layout_toStartOf="@+id/discard_scheduled_message"
-            android:layout_toEndOf="@+id/scheduled_message_icon"
-            android:background="@drawable/ripple_background"
-            android:clickable="true"
-            android:focusable="true"
-            android:gravity="center_vertical"
-            android:minHeight="@dimen/normal_icon_size"
-            android:paddingStart="@dimen/small_margin"
-            android:paddingEnd="@dimen/activity_margin"
-            android:textSize="@dimen/middle_text_size"
-            tools:ignore="HardcodedText"
-            tools:text="Tomorrow at 6PM GMT +05:30" />
-
-        <ImageView
-            android:id="@+id/discard_scheduled_message"
-            android:layout_width="@dimen/normal_icon_size"
-            android:layout_height="@dimen/normal_icon_size"
-            android:layout_alignParentEnd="true"
-            android:layout_gravity="end"
-            android:background="?selectableItemBackgroundBorderless"
-            android:contentDescription="@string/cancel_schedule_send"
-            android:padding="@dimen/normal_margin"
-            android:src="@drawable/ic_cross_vector" />
-
-    </RelativeLayout>
-
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/thread_attachments_recyclerview"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/tiny_margin"
-        android:layout_marginBottom="@dimen/small_margin"
-        android:clipToPadding="false"
-        android:orientation="horizontal"
-        android:paddingStart="@dimen/normal_margin"
-        android:paddingEnd="@dimen/normal_margin"
-        android:scrollbars="none"
-        android:visibility="gone"
-        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
-        app:layout_constraintBottom_toTopOf="@id/thread_type_message"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_goneMarginTop="@dimen/medium_margin"
-        tools:itemCount="2"
-        tools:listitem="@layout/item_attachment_document_preview"
-        tools:visibility="visible" />
-
-    <ImageView
-        android:id="@+id/thread_add_attachment"
-        android:layout_width="@dimen/normal_icon_size"
-        android:layout_height="@dimen/normal_icon_size"
-        android:layout_marginStart="@dimen/small_margin"
-        android:alpha="0.9"
-        android:background="?selectableItemBackgroundBorderless"
-        android:contentDescription="@string/attachment"
-        android:padding="@dimen/normal_margin"
-        android:src="@drawable/ic_plus_vector"
-        android:visibility="gone"
-        app:layout_constraintBottom_toBottomOf="@+id/thread_type_message"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/thread_type_message" />
-
     <ImageView
         android:id="@+id/send_bar_top_divider"
         android:layout_width="match_parent"
         android:layout_height="@dimen/divider_height"
-        android:layout_marginBottom="@dimen/medium_margin"
         android:background="@color/divider_grey"
         android:importantForAccessibility="no"
-        app:layout_constraintBottom_toTopOf="@+id/thread_type_message" />
+        app:layout_constraintBottom_toTopOf="@+id/pending_attachments_holder"
+        app:layout_goneMarginBottom="@dimen/medium_margin" />
+
+    <LinearLayout
+        android:id="@+id/pending_attachments_holder"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/normal_margin"
+        android:layout_marginTop="@dimen/medium_margin"
+        android:layout_marginEnd="@dimen/medium_margin"
+        android:layout_marginBottom="@dimen/small_margin"
+        android:orientation="horizontal"
+        android:visibility="gone"
+        app:layout_constraintBottom_toTopOf="@+id/thread_type_message"
+        tools:visibility="visible" />
 
     <org.fossify.commons.views.MyEditText
         android:id="@+id/thread_type_message"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginStart="@dimen/small_margin"
+        android:layout_marginStart="@dimen/normal_margin"
         android:layout_marginTop="@dimen/medium_margin"
         android:layout_marginEnd="@dimen/medium_margin"
         android:layout_marginBottom="@dimen/medium_margin"
@@ -127,10 +44,9 @@
         android:maxLines="8"
         android:paddingHorizontal="@dimen/activity_margin"
         android:paddingVertical="@dimen/normal_margin"
-        app:layout_constraintBottom_toTopOf="@+id/attachment_picker_divider"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toStartOf="@id/thread_select_sim_icon"
-        app:layout_constraintStart_toEndOf="@+id/thread_add_attachment"
-        app:layout_goneMarginStart="@dimen/normal_margin" />
+        app:layout_constraintStart_toStartOf="parent" />
 
     <ImageView
         android:id="@+id/thread_select_sim_icon"
@@ -198,32 +114,4 @@
         app:layout_constraintBottom_toBottomOf="@+id/thread_type_message"
         app:layout_constraintEnd_toEndOf="parent" />
 
-    <View
-        android:id="@+id/attachment_picker_divider"
-        android:layout_width="match_parent"
-        android:layout_height="@dimen/divider_height"
-        android:layout_alignParentStart="true"
-        android:layout_alignParentEnd="true"
-        android:background="@color/divider_grey"
-        android:importantForAccessibility="no"
-        app:layout_constraintBottom_toTopOf="@id/attachment_picker_holder" />
-
-    <ScrollView
-        android:id="@+id/attachment_picker_holder"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginHorizontal="@dimen/small_margin"
-        android:overScrollMode="always"
-        android:visibility="gone"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        tools:visibility="visible">
-
-        <include
-            android:id="@+id/attachment_picker"
-            layout="@layout/layout_attachment_picker"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
-    </ScrollView>
 </androidx.constraintlayout.widget.ConstraintLayout>
