@@ -13,6 +13,13 @@ const val THREAD_TEXT = "thread_text"
 const val THREAD_NUMBER = "thread_number"
 const val THREAD_ATTACHMENT_URI = "thread_attachment_uri"
 const val THREAD_ATTACHMENT_URIS = "thread_attachment_uris"
+
+// consumed from an incoming SEND/SEND_MULTIPLE intent to skip NewConversationActivity's own
+// recipient entry - sent by the Fossify Gallery fork's elderly-friendly "Share with" picker
+// (docs/elderly-spec/share-delete.md in that repo); keep these two keys in sync with
+// MESSAGES_EXTRA_PREFILL_PHONE_NUMBER / MESSAGES_EXTRA_PREFILL_CONTACT_NAME there
+const val PREFILL_PHONE_NUMBER_EXTRA = "org.fossify.messages.extra.PREFILL_PHONE_NUMBER"
+const val PREFILL_CONTACT_NAME_EXTRA = "org.fossify.messages.extra.PREFILL_CONTACT_NAME"
 const val SEARCHED_MESSAGE_ID = "searched_message_id"
 const val USE_SIM_ID_PREFIX = "use_sim_id_"
 const val NOTIFICATION_CHANNEL_ID = "fossify_messages"

@@ -46,6 +46,8 @@ import org.fossify.messages.databinding.ActivityNewConversationBinding
 import org.fossify.messages.databinding.ItemRecipientChipBinding
 import org.fossify.messages.extensions.addDividerIfNeeded
 import org.fossify.messages.extensions.getThreadId
+import org.fossify.messages.helpers.PREFILL_CONTACT_NAME_EXTRA
+import org.fossify.messages.helpers.PREFILL_PHONE_NUMBER_EXTRA
 import org.fossify.messages.helpers.SmsIntentParser
 import org.fossify.messages.helpers.THREAD_ATTACHMENT_URI
 import org.fossify.messages.helpers.THREAD_ATTACHMENT_URIS
@@ -71,6 +73,16 @@ class NewConversationActivity : SimpleActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(binding.root)
+
+        // sent by the Fossify Gallery fork's elderly-friendly "Share with" contact picker - skip
+        // straight to the thread instead of asking the user to pick a recipient a second time
+        val prefillPhoneNumber = intent.getStringExtra(PREFILL_PHONE_NUMBER_EXTRA)
+        if (!prefillPhoneNumber.isNullOrEmpty()) {
+            launchThreadActivity(prefillPhoneNumber, intent.getStringExtra(PREFILL_CONTACT_NAME_EXTRA) ?: prefillPhoneNumber)
+            finish()
+            return
+        }
+
         title = getString(R.string.new_conversation)
         updateTextColors(binding.newConversationHolder)
 
