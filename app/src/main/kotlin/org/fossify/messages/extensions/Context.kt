@@ -11,6 +11,7 @@ import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
+import android.provider.ContactsContract
 import android.provider.ContactsContract.PhoneLookup
 import android.provider.OpenableColumns
 import android.provider.Telephony.Mms
@@ -806,6 +807,33 @@ fun Context.getNameAndPhotoFromPhoneNumber(number: String): NamePhoto {
 
     MessagingCache.namePhoto.put(number, result)
     return result
+}
+
+// a thread participant's SimpleContact.rawId/contactId are just the SMS/MMS address-row id
+// (see getThreadParticipants), not a real ContactsProvider id, so resolving the actual contact
+// for View/Edit contact has to go through the phone number instead, the same way the name/photo
+// above does
+fun Context.getContactLookupUriForPhoneNumber(number: String): Uri? {
+    if (!hasPermission(PERMISSION_READ_CONTACTS)) {
+        return null
+    }
+
+    val uri = Uri.withAppendedPath(PhoneLookup.CONTENT_FILTER_URI, Uri.encode(number))
+    val projection = arrayOf(PhoneLookup.LOOKUP_KEY)
+
+    return try {
+        val cursor = contentResolver.query(uri, projection, null, null, null)
+        cursor.use {
+            if (cursor?.moveToFirst() == true) {
+                val lookupKey = cursor.getStringValue(PhoneLookup.LOOKUP_KEY)
+                Uri.withAppendedPath(ContactsContract.Contacts.CONTENT_LOOKUP_URI, lookupKey)
+            } else {
+                null
+            }
+        }
+    } catch (_: Exception) {
+        null
+    }
 }
 
 fun Context.insertNewSMS(

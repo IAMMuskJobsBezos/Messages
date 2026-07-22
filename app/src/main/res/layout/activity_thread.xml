@@ -175,6 +175,15 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent" />
 
+        <!-- transparent scrim behind thread_header_dropdown; tapping anywhere outside the
+             dropdown itself dismisses it, see hideHeaderDropdown/showHeaderDropdown -->
+        <View
+            android:id="@+id/thread_header_dropdown_scrim"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone"
+            app:layout_constraintTop_toTopOf="parent" />
+
         <!-- pill options revealed by the three dots button, see showHeaderDropdown.
              Overlays the messages instead of pushing them down -->
         <LinearLayout

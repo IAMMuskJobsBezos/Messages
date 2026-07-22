@@ -2,7 +2,6 @@ package org.fossify.messages.activities
 
 import android.annotation.SuppressLint
 import android.app.Activity
-import android.content.ContentUris
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.BitmapFactory
@@ -43,6 +42,8 @@ import androidx.core.view.updateLayoutParams
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
+import com.bumptech.glide.load.resource.bitmap.CenterCrop
+import com.bumptech.glide.load.resource.bitmap.RoundedCorners
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import org.fossify.commons.dialogs.ConfirmationDialog
@@ -72,7 +73,6 @@ import org.fossify.commons.extensions.isDynamicTheme
 import org.fossify.commons.extensions.isOrWasThankYouInstalled
 import org.fossify.commons.extensions.isVisible
 import org.fossify.commons.extensions.launchActivityIntent
-import org.fossify.commons.extensions.launchViewContactIntent
 import org.fossify.commons.extensions.maybeShowNumberPickerDialog
 import org.fossify.commons.extensions.normalizeString
 import org.fossify.commons.extensions.notificationManager
@@ -114,6 +114,7 @@ import org.fossify.messages.extensions.dialNumber
 import org.fossify.messages.extensions.emptyMessagesRecycleBinForConversation
 import org.fossify.messages.extensions.filterNotInByKey
 import org.fossify.messages.extensions.getAddresses
+import org.fossify.messages.extensions.getContactLookupUriForPhoneNumber
 import org.fossify.messages.extensions.getDefaultKeyboardHeight
 import org.fossify.messages.extensions.getMessages
 import org.fossify.messages.extensions.getSmsDraft
@@ -318,6 +319,18 @@ class ThreadActivity : SimpleActivity() {
             if (participants.isEmpty()) return@setOnMenuItemClickListener true
             return@setOnMenuItemClickListener handleMenuItemAction(menuItem)
         }
+
+        // tapping anywhere on the header (not just the three dots icon) opens the dropdown
+        binding.threadToolbar.setOnClickListener {
+            if (participants.isNotEmpty() && !isRecycleBin) {
+                toggleHeaderDropdown()
+            }
+        }
+
+        // tapping outside the dropdown dismisses it
+        binding.threadHeaderDropdownScrim.setOnClickListener {
+            hideHeaderDropdown()
+        }
     }
 
     private fun handleMenuItemAction(menuItem: MenuItem): Boolean {
@@ -340,6 +353,7 @@ class ThreadActivity : SimpleActivity() {
     private fun hideHeaderDropdown() {
         binding.threadHeaderDropdown.beGone()
         binding.threadHeaderDropdown.removeAllViews()
+        binding.threadHeaderDropdownScrim.beGone()
     }
 
     private fun showHeaderDropdown() {
@@ -382,6 +396,7 @@ class ThreadActivity : SimpleActivity() {
             }
         }
         binding.threadHeaderDropdown.beVisible()
+        binding.threadHeaderDropdownScrim.beVisible()
     }
 
     private fun showNumberChoices(iconId: Int, onPick: (String) -> Unit) {
@@ -393,6 +408,7 @@ class ThreadActivity : SimpleActivity() {
             }
         }
         binding.threadHeaderDropdown.beVisible()
+        binding.threadHeaderDropdownScrim.beVisible()
     }
 
     private fun addDropdownOption(iconId: Int, label: String, hideOnClick: Boolean = true, onClick: () -> Unit) {
@@ -417,17 +433,28 @@ class ThreadActivity : SimpleActivity() {
     }
 
     private fun viewContact() {
-        val contactId = participants.firstOrNull()?.contactId ?: return
-        val uri = ContentUris.withAppendedId(ContactsContract.Contacts.CONTENT_URI, contactId.toLong())
-        launchViewContactIntent(uri)
+        val number = participants.firstOrNull()?.phoneNumbers?.firstOrNull()?.normalizedNumber ?: return
+        ensureBackgroundThread {
+            val uri = getContactLookupUriForPhoneNumber(number) ?: return@ensureBackgroundThread
+            runOnUiThread {
+                Intent(Intent.ACTION_VIEW).apply {
+                    setDataAndType(uri, ContactsContract.Contacts.CONTENT_ITEM_TYPE)
+                    launchActivityIntent(this)
+                }
+            }
+        }
     }
 
     private fun editContact() {
-        val contactId = participants.firstOrNull()?.contactId ?: return
-        val uri = ContentUris.withAppendedId(ContactsContract.Contacts.CONTENT_URI, contactId.toLong())
-        Intent(Intent.ACTION_EDIT).apply {
-            data = uri
-            launchActivityIntent(this)
+        val number = participants.firstOrNull()?.phoneNumbers?.firstOrNull()?.normalizedNumber ?: return
+        ensureBackgroundThread {
+            val uri = getContactLookupUriForPhoneNumber(number) ?: return@ensureBackgroundThread
+            runOnUiThread {
+                Intent(Intent.ACTION_EDIT).apply {
+                    setDataAndType(uri, ContactsContract.Contacts.CONTENT_ITEM_TYPE)
+                    launchActivityIntent(this)
+                }
+            }
         }
     }
 
@@ -978,9 +1005,16 @@ class ThreadActivity : SimpleActivity() {
             }
         }
 
+        // Two-way sync with the IME: the focus listener above catches most cases, but if the
+        // EditText already had focus when the keyboard was raised (e.g. auto-focused on
+        // opening an empty thread), no focus *change* fires and the idle Voice/Keyboard row
+        // would otherwise be left showing underneath the system keyboard. Insets are the one
+        // signal that's reliable regardless of how the keyboard was triggered.
         ViewCompat.setOnApplyWindowInsetsListener(binding.threadHolder) { _, insets ->
             val imeVisible = insets.isVisible(WindowInsetsCompat.Type.ime())
-            if (!imeVisible && inputMode == InputMode.KEYBOARD) {
+            if (imeVisible && inputMode == InputMode.IDLE) {
+                setInputMode(InputMode.KEYBOARD)
+            } else if (!imeVisible && inputMode == InputMode.KEYBOARD) {
                 setInputMode(InputMode.IDLE)
             }
             insets
@@ -1105,10 +1139,12 @@ class ThreadActivity : SimpleActivity() {
             layoutInflater, binding.messageHolder.pendingAttachmentsHolder, false
         )
         thumbnailBinding.root.tag = uri
+        val cornerRadius = resources.getDimensionPixelSize(org.fossify.commons.R.dimen.rounded_corner_radius_small)
         Glide.with(this)
             .load(uri)
-            .centerCrop()
+            .transform(CenterCrop(), RoundedCorners(cornerRadius))
             .into(thumbnailBinding.pendingAttachmentImage)
+        thumbnailBinding.pendingAttachmentPlayBadge.beVisibleIf(getMimeTypeFromUri(uri).startsWith("video/"))
 
         thumbnailBinding.pendingAttachmentRemove.applyColorFilter(getProperBackgroundColor())
         thumbnailBinding.pendingAttachmentRemove.background.applyColorFilter(getProperTextColor())
