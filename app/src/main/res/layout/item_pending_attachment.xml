@@ -3,7 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="64dp"
     android:layout_height="64dp"
-    android:layout_marginEnd="@dimen/small_margin">
+    android:layout_marginEnd="@dimen/medium_margin">
 
     <ImageView
         android:id="@+id/pending_attachment_image"
@@ -12,6 +12,16 @@
         android:background="@drawable/chip_rectangle_background"
         android:scaleType="centerCrop"
         tools:ignore="ContentDescription" />
+
+    <ImageView
+        android:id="@+id/pending_attachment_play_badge"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:layout_gravity="center"
+        android:src="@drawable/ic_vector_play_circle_outline"
+        android:visibility="gone"
+        tools:ignore="ContentDescription"
+        tools:visibility="visible" />
 
     <ImageView
         android:id="@+id/pending_attachment_remove"

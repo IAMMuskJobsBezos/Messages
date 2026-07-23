@@ -71,7 +71,7 @@
             android:layout_alignBottom="@id/thread_message_body"
             android:layout_alignStart="@id/thread_message_body"
             android:layout_alignEnd="@id/thread_message_body"
-            android:background="#66000000"
+            android:background="@drawable/item_message_failed_overlay_background"
             android:clickable="true"
             android:focusable="true"
             android:padding="@dimen/small_margin"
